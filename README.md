@@ -2,7 +2,12 @@
   <img src="assets/hero-banner.svg" alt="Nilesoft Shell GUI" width="600">
   <br><br>
   <p>A visual editor for <a href="https://github.com/moudey/shell">Nilesoft Shell</a> context menu configuration &mdash; no manual <code>.nss</code> editing required.</p>
-  <p><em>Visual editor for Windows context menu config files</em></p>
+  <p>
+    <a href="https://github.com/pxnz3r/Nilesoft-Shell-GUI/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT"></a>
+    <a href="https://streamlit.io"><img src="https://img.shields.io/badge/built%20with-Streamlit-FF4B4B?style=flat-square&logo=streamlit" alt="Streamlit"></a>
+    <a href="https://github.com/moudey/shell/releases"><img src="https://img.shields.io/badge/Nilesoft%20Shell-1.9%2B-181717?style=flat-square" alt="Nilesoft Shell"></a>
+    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square&logo=python" alt="Python"></a>
+  </p>
 </div>
 
 ## Setup

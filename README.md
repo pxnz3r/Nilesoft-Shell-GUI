@@ -1,87 +1,94 @@
 <div align="center">
   <img src="assets/hero-banner.svg" alt="Nilesoft Shell GUI" width="600">
+  <br><br>
+  <p>A visual editor for <a href="https://github.com/moudey/shell">Nilesoft Shell</a> context menu configuration &mdash; no manual <code>.nss</code> editing required.</p>
+  <p>
+    <a href="https://github.com/pxnz3r/Nilesoft-Shell-GUI/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT"></a>
+    <a href="https://streamlit.io"><img src="https://img.shields.io/badge/built%20with-Streamlit-FF4B4B?style=flat-square&logo=streamlit" alt="Streamlit"></a>
+    <a href="https://github.com/moudey/shell/releases"><img src="https://img.shields.io/badge/Nilesoft%20Shell-1.9%2B-181717?style=flat-square" alt="Nilesoft Shell"></a>
+    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square&logo=python" alt="Python"></a>
+  </p>
 </div>
 
-## Prerequisites
+## Setup
 
-- [Nilesoft Shell](https://github.com/moudey/shell) installed on Windows
-  - Download the latest release, extract, and run `shell.exe /reg` to register the shell extension
-- **Python 3.10+** with `streamlit` installed (`pip install streamlit`)
+**1. Install Nilesoft Shell**
 
-## Quick Start
-
-```bat
-git clone <your-repo-url>
-cd nilesoft-shell-gui
-streamlit run theme-tweaker.py
+Download the [latest release](https://github.com/moudey/shell/releases), extract, and register:
+```
+shell.exe /reg
 ```
 
+**2. Clone and install dependencies**
+```bat
+git clone https://github.com/pxnz3r/Nilesoft-Shell-GUI
+cd Nilesoft-Shell-GUI
+pip install streamlit
+```
+
+**3. Run the GUI**
+```bat
+streamlit run theme-tweaker.py
+```
 Opens at `http://localhost:8501`.
 
 ## Linking Config to Shell
 
-For Nilesoft Shell to pick up your `.nss` files, they need to be in Shell's config directory. Two options:
+For changes to take effect, Shell needs access to the `.nss` files:
 
-**Option A - Copy** (simple): Copy all `.nss` files from this repo into your Shell install folder (where `shell.exe` lives).
+**Copy** &mdash; copy the repo files into your Shell install folder.
 
-**Option B - Symlink** (recommended for dev): Run as admin:
+**Symlink** &mdash; run as admin for live editing:
 ```bat
-mklink /J "C:\Program Files\Nilesoft Shell\imports" "C:\full\path\to\repo\imports"
-mklink "C:\Program Files\Nilesoft Shell\shell.nss" "C:\full\path\to\repo\shell.nss"
+mklink /J "C:\Program Files\Nilesoft Shell\imports" "C:\full\path\to\Nilesoft-Shell-GUI\imports"
+mklink "C:\Program Files\Nilesoft Shell\shell.nss" "C:\full\path\to\Nilesoft-Shell-GUI\shell.nss"
 ```
 
-After any change: **Ctrl + right-click** desktop → **Shell → Update changes** (or restart Explorer).
+After any change: **Ctrl + right-click** desktop &rarr; **Shell &rarr; Update changes** (or restart Explorer).
 
-> Set your Shell install path in the **Settings → Shell Installation Path** tab so the GUI can open `shell.log` for error checking.
+> Set the Shell install path in the **Settings &rarr; Shell Installation Path** tab to read `shell.log` for errors.
 
 ## Features
 
 | Tab | Purpose |
 |-----|---------|
-| **🎨 Theme** | Edit colors, gradient, font, border, shadow - 9 presets |
-| **➕ Menu Items** | Add custom context menu entries (app, command, icon, conditions) |
-| **🔄 Modify** | Hide, reorder, or move built-in system menu items |
-| **⚙️ Settings** | Global Shell behavior (priority, delay, tooltips, exclude) |
-| **📂 Imports** | View, toggle, and edit all `.nss` files inline |
-| **🔎 Icon Browser** | Preview all built-in icons and SVG definitions |
-| **🔧 Syntax Check** | Validate `.nss` files for mismatched braces/parens |
-| **📜 History** | Auto-backups: restore any previous version |
-| **📦 Export/Import** | Package your config as `.zip` |
+| Theme | Colors, 4-stop gradients, effects, border, shadow, font &mdash; 9 presets |
+| Menu Items | Build custom entries (title, command, args, icon, conditions) |
+| Modify | Hide, reorder, or move built-in system menu items |
+| Settings | Priority, delay, tooltips, exclude condition |
+| Imports | Inline editor for any `.nss` file with syntax validation |
+| Icon Browser | Preview all built-in SVG icons with live color slots |
+| History | Auto-timestamped backups with one-click restore |
+| Export/Import | Package your config as `.zip` with optional theme state |
 
-## Project Structure
+## Structure
 
 ```
-├── theme-tweaker.py         # Streamlit GUI
-├── start.bat                # Launcher
-├── shell.nss                # Main entry point
+├── theme-tweaker.py         Streamlit GUI
+├── start.bat                Launcher
+├── shell.nss                Main entry point (imports all modules)
 ├── imports/
-│   ├── theme.nss            # Visual theme
-│   ├── modify.nss           # System item reordering
-│   ├── custom.nss           # Your custom items
-│   ├── images.nss           # SVG icons
-│   ├── terminal.nss         # Terminal entries
-│   ├── file-manage.nss      # File operations
-│   ├── develop.nss          # Dev tools
-│   ├── goto.nss             # Navigation shortcuts
-│   └── taskbar.nss          # Taskbar items
-├── AGENTS.md                # AI assistant context
-└── SKILL.md                 # LLM skill instructions
+│   ├── theme.nss            Colors, gradients, fonts, borders, shadows
+│   ├── modify.nss           System item reordering rules
+│   ├── custom.nss           Your custom menu items (auto-created)
+│   ├── images.nss           ~100 SVG icon definitions
+│   ├── terminal.nss         Terminal / command prompt entries
+│   ├── file-manage.nss      File operations (copy path, attributes, etc.)
+│   ├── develop.nss          Dev tools (VS Code, dotnet, etc.)
+│   ├── goto.nss             Navigation shortcuts
+│   └── taskbar.nss          Taskbar-specific items
+├── Docs/                    Nilesoft Shell reference documentation
+├── AGENTS.md                AI assistant context
+└── SKILL.md                 LLM skill instructions
 ```
 
-## Docs
+## Documentation
 
-Detailed Nilesoft Shell reference docs in `Docs/`:
-- [Getting Started](Docs/Get_started.md)
-- [Syntax Rules](Docs/Configuration/Syntax_rules.md)
-- [Themes](Docs/Configuration/themes.md)
-- [Expressions](Docs/Expressions/expressions.md)
-- [Examples](Docs/Examples/example1.md)
-
-Or visit [nilesoft.org/docs](https://nilesoft.org/docs).
+Full Nilesoft Shell reference in the `Docs/` folder or at [nilesoft.org/docs](https://nilesoft.org/docs).
 
 ## License
 
-This GUI project is MIT licensed. Nilesoft Shell itself is [MIT](LICENSE) by [moudey](https://github.com/moudey/shell).
+This GUI is MIT licensed. Nilesoft Shell is [MIT](LICENSE) by [moudey](https://github.com/moudey/shell).
 
 ---
 

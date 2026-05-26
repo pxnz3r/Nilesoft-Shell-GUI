@@ -8,38 +8,13 @@
       <stop offset="0%" stop-color="#6366f1"/>
       <stop offset="100%" stop-color="#a78bfa"/>
     </linearGradient>
-    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
-    </linearGradient>
   </defs>
   <rect width="800" height="200" rx="12" fill="url(#bg)"/>
   <rect x="0" y="0" width="800" height="3" fill="url(#accent)"/>
-  <rect x="0" y="0" width="800" height="200" fill="url(#glow)" opacity="0.3">
-    <animate attributeName="opacity" values="0.2;0.4;0.2" dur="4s" repeatCount="indefinite"/>
-  </rect>
-  <g opacity="0.04">
-    <line x1="0" y1="50" x2="800" y2="50" stroke="#fff" stroke-width="0.5"/>
-    <line x1="0" y1="100" x2="800" y2="100" stroke="#fff" stroke-width="0.5"/>
-    <line x1="0" y1="150" x2="800" y2="150" stroke="#fff" stroke-width="0.5"/>
-    <line x1="200" y1="0" x2="200" y2="200" stroke="#fff" stroke-width="0.5"/>
-    <line x1="400" y1="0" x2="400" y2="200" stroke="#fff" stroke-width="0.5"/>
-    <line x1="600" y1="0" x2="600" y2="200" stroke="#fff" stroke-width="0.5"/>
-  </g>
-  <text x="50" y="80" font-family="Segoe UI, sans-serif" font-size="32" font-weight="700" fill="#ffffff" letter-spacing="1">Nilesoft Shell GUI</text>
-  <text x="50" y="110" font-family="Segoe UI, sans-serif" font-size="15" fill="#8888aa">Visual editor for Windows context menu config files</text>
-  <rect x="50" y="130" width="90" height="24" rx="6" fill="#6366f1" opacity="0.85"/>
-  <text x="56" y="146" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#ffffff">Streamlit</text>
-  <rect x="148" y="130" width="85" height="24" rx="6" fill="#ffffff10" stroke="#ffffff20" stroke-width="1"/>
-  <text x="155" y="146" font-family="Segoe UI, sans-serif" font-size="12" fill="#aaaacc">MIT License</text>
-  <g transform="translate(620, 40)">
-    <rect x="0" y="0" width="130" height="120" rx="8" fill="#ffffff06" stroke="#ffffff10" stroke-width="1"/>
-    <rect x="12" y="12" width="106" height="12" rx="3" fill="#ffffff10"/>
-    <rect x="12" y="30" width="80" height="10" rx="3" fill="#ffffff08"/>
-    <rect x="12" y="46" width="90" height="10" rx="3" fill="#ffffff08"/>
-    <rect x="12" y="62" width="70" height="10" rx="3" fill="#ffffff08"/>
-    <rect x="12" y="82" width="106" height="1" fill="#ffffff10"/>
-    <rect x="12" y="92" width="60" height="10" rx="3" fill="#ffffff08"/>
-    <rect x="78" y="92" width="40" height="10" rx="3" fill="#ffffff08"/>
-  </g>
+  <text x="50" y="85" font-family="Segoe UI, sans-serif" font-size="34" font-weight="700" fill="#ffffff">Nilesoft Shell GUI</text>
+  <text x="50" y="115" font-family="Segoe UI, sans-serif" font-size="15" fill="#8888aa">Visual editor for Windows context menu config files</text>
+  <rect x="50" y="135" width="90" height="26" rx="6" fill="#6366f1"/>
+  <text x="56" y="152" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#ffffff">Streamlit</text>
+  <rect x="150" y="135" width="85" height="26" rx="6" fill="none" stroke="#ffffff20" stroke-width="1"/>
+  <text x="157" y="152" font-family="Segoe UI, sans-serif" font-size="12" fill="#aaaacc">MIT</text>
 </svg>

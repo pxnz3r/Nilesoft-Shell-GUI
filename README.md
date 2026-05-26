@@ -26,7 +26,14 @@
       <rect x="0" y="0" width="90" height="26" rx="6" fill="#6366f1" opacity="0.9"><animate attributeName="width" values="90;110;90" dur="3s" repeatCount="indefinite"/></rect>
       <text x="16" y="17" font-family="monospace" font-size="11" fill="#fff">Streamlit</text>
     </g>
-    <text x="310" y="140" font-family="Segoe UI, sans-serif" font-size="11" fill="#606080">Made with ❤️ &amp; custom SVG by pxnz3r</text>
+    <text x="310" y="135" font-family="Segoe UI, sans-serif" font-size="11" fill="#606080">Made with</text>
+    <g transform="translate(370, 122)">
+      <path d="M0-6 A8 8 0 0 1 16-6 A8 8 0 0 1 32-6 Q32 4 16 16 Q0 4 0-6Z" fill="none" stroke="#ef4444" stroke-width="1.5">
+        <animate attributeName="d" values="M0-6 A8 8 0 0 1 16-6 A8 8 0 0 1 32-6 Q32 4 16 16 Q0 4 0-6Z;M0-4 A10 10 0 0 1 16-4 A10 10 0 0 1 32-4 Q32 6 16 18 Q0 6 0-4Z;M0-6 A8 8 0 0 1 16-6 A8 8 0 0 1 32-6 Q32 4 16 16 Q0 4 0-6Z" dur="1s" repeatCount="indefinite"/>
+        <animate attributeName="fill" values="#ef4444;#f87171;#ef4444" dur="1s" repeatCount="indefinite"/>
+      </path>
+    </g>
+    <text x="408" y="135" font-family="Segoe UI, sans-serif" font-size="11" fill="#606080">by pxnz3r</text>
   </svg>
 </div>
 

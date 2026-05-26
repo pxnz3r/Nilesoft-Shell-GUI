@@ -1,6 +1,6 @@
 # Nilesoft Shell - LLM Skill
 
-You are helping with a **Nilesoft Shell** project that customizes Windows File Explorer context menus. Below is everything you need to understand the project and make changes correctly.
+You are helping with a **Nilesoft Shell** GUI project that lets users visually customize Windows File Explorer context menus. The GUI is a **Streamlit** app (`theme-tweaker.py`) that edits `.nss` configuration files.
 
 ## Project Location
 The script folder — all `.nss` files live here and in `imports/`.
@@ -140,16 +140,43 @@ settings
 - `@app.cfg` — config file path
 - `@theme.islight` — whether light theme is active
 
-## GUI App
-`theme-tweaker.py` is a Streamlit app that provides visual editing for themes, items, modify rules, settings, and imports.
-- Run with: `streamlit run theme-tweaker.py`
-- Opens at `http://localhost:8501`
+## GUI App (theme-tweaker.py)
+
+`theme-tweaker.py` is a Streamlit app with tabs:
+- **Theme** — visual editor with gradient presets, color pickers, sliders, live NSS preview
+- **Menu Items** — build custom items with form inputs, append to custom.nss
+- **Modify** — add hide/reorder rules for built-in items
+- **Settings** — edit global shell.nss settings
+- **Imports** — inline editor for any .nss file with syntax checker
+- **Icon Browser** — preview all icons from images.nss
+- **History** — restore previous backups
+- **Export/Import** — package/restore config as zip
+
+Key constants:
+```python
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+THEME_PATH = os.path.join(_SCRIPT_DIR, "imports", "theme.nss")
+CUSTOM_PATH = os.path.join(_SCRIPT_DIR, "imports", "custom.nss")
+MODIFY_PATH = os.path.join(_SCRIPT_DIR, "imports", "modify.nss")
+SHELL_PATH = os.path.join(_SCRIPT_DIR, "shell.nss")
+IMPORTS_DIR = os.path.join(_SCRIPT_DIR, "imports")
+BACKUP_DIR = os.path.join(_SCRIPT_DIR, "backups")
+```
+
+Key functions:
+- `generate_theme()` — builds NSS theme code from session state values
+- `backup_file()` — saves timestamped backup before overwrites
+- `list_backups()` — returns sorted backup list for restore
+- `parse_shell_settings()` — reads current settings from shell.nss
+- `read_file_safe()` — reads files with UTF-8/CP1252 fallback
+
+The app uses `st.session_state` to persist all theme values across reruns.
 
 ## Reloading
 After any `.nss` change, user must reload: **Ctrl + right-click** desktop/taskbar → **Shell → Update changes**, or restart Windows Explorer.
 
 ## Error Checking
-- Check `shell.log` for parse errors.
+- Check `shell.log` for parse errors (point GUI Settings tab to Shell install dir).
 - Errors show file name and line number.
 
 ## Official Docs

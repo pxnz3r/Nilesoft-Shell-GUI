@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/hero-banner.svg" alt="Nilesoft Shell GUI" width="600">
+  <img src="https://raw.githubusercontent.com/pxnz3r/Nilesoft-Shell-GUI/e0b9fce/assets/hero-banner.svg" alt="Nilesoft Shell GUI" width="600">
   <br><br>
   <p>A visual editor for <a href="https://github.com/moudey/shell">Nilesoft Shell</a> context menu configuration - no manual <code>.nss</code> editing required.</p>
   <p>

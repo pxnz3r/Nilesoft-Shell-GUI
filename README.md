@@ -1,8 +1,34 @@
-# Nilesoft Shell GUI
-
-A visual editor for [Nilesoft Shell](https://github.com/moudey/shell) context menu configuration — no manual `.nss` editing required.
-
-Built with [Streamlit](https://streamlit.io).
+<div align="center">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 180" width="600" height="180">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#1a1a3e"><animate attributeName="stop-color" values="#1a1a3e;#0f2255;#1a1a3e" dur="6s" repeatCount="indefinite"/></stop>
+        <stop offset="50%" stop-color="#0f2255"><animate attributeName="stop-color" values="#0f2255;#1a1a3e;#0f2255" dur="6s" repeatCount="indefinite"/></stop>
+        <stop offset="100%" stop-color="#0a0a2e"><animate attributeName="stop-color" values="#0a0a2e;#162040;#0a0a2e" dur="6s" repeatCount="indefinite"/></stop>
+      </linearGradient>
+      <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#6366f1"><animate attributeName="stop-color" values="#6366f1;#818cf8;#6366f1" dur="4s" repeatCount="indefinite"/></stop>
+        <stop offset="100%" stop-color="#a78bfa"><animate attributeName="stop-color" values="#a78bfa;#818cf8;#a78bfa" dur="4s" repeatCount="indefinite"/></stop>
+      </linearGradient>
+    </defs>
+    <rect width="600" height="180" rx="12" fill="url(#bg)"/>
+    <rect x="0" y="0" width="600" height="4" fill="url(#accent)"/>
+    <g transform="translate(50, 50)">
+      <rect x="0" y="0" width="220" height="90" rx="8" fill="#ffffff10" stroke="#ffffff20" stroke-width="1"/>
+      <rect x="10" y="10" width="200" height="16" rx="4" fill="#ffffff15"><animate attributeName="opacity" values="0.3;0.6;0.3" dur="2s" repeatCount="indefinite"/></rect>
+      <rect x="10" y="34" width="160" height="14" rx="4" fill="#ffffff12"/>
+      <rect x="10" y="54" width="140" height="14" rx="4" fill="#ffffff12"/>
+      <rect x="10" y="74" width="180" height="10" rx="4" fill="#ffffff08"/>
+    </g>
+    <text x="310" y="62" font-family="Segoe UI, sans-serif" font-size="22" font-weight="700" fill="#ffffff" letter-spacing="1">Nilesoft Shell GUI</text>
+    <text x="310" y="86" font-family="Segoe UI, sans-serif" font-size="13" fill="#a0a0c0">Visual editor for context menu config</text>
+    <g transform="translate(310, 100)">
+      <rect x="0" y="0" width="90" height="26" rx="6" fill="#6366f1" opacity="0.9"><animate attributeName="width" values="90;110;90" dur="3s" repeatCount="indefinite"/></rect>
+      <text x="16" y="17" font-family="monospace" font-size="11" fill="#fff">Streamlit</text>
+    </g>
+    <text x="310" y="140" font-family="Segoe UI, sans-serif" font-size="11" fill="#606080">Made with ❤️ &amp; custom SVG by pxnz3r</text>
+  </svg>
+</div>
 
 ## Prerequisites
 
@@ -24,9 +50,9 @@ Opens at `http://localhost:8501`.
 
 For Nilesoft Shell to pick up your `.nss` files, they need to be in Shell's config directory. Two options:
 
-**Option A — Copy** (simple): Copy all `.nss` files from this repo into your Shell install folder (where `shell.exe` lives).
+**Option A - Copy** (simple): Copy all `.nss` files from this repo into your Shell install folder (where `shell.exe` lives).
 
-**Option B — Symlink** (recommended for dev): Run as admin:
+**Option B - Symlink** (recommended for dev): Run as admin:
 ```bat
 mklink /J "C:\Program Files\Nilesoft Shell\imports" "C:\full\path\to\repo\imports"
 mklink "C:\Program Files\Nilesoft Shell\shell.nss" "C:\full\path\to\repo\shell.nss"
@@ -40,7 +66,7 @@ After any change: **Ctrl + right-click** desktop → **Shell → Update changes*
 
 | Tab | Purpose |
 |-----|---------|
-| **🎨 Theme** | Edit colors, gradient, font, border, shadow — 9 presets |
+| **🎨 Theme** | Edit colors, gradient, font, border, shadow - 9 presets |
 | **➕ Menu Items** | Add custom context menu entries (app, command, icon, conditions) |
 | **🔄 Modify** | Hide, reorder, or move built-in system menu items |
 | **⚙️ Settings** | Global Shell behavior (priority, delay, tooltips, exclude) |

@@ -82,3 +82,7 @@ Or visit [nilesoft.org/docs](https://nilesoft.org/docs).
 ## License
 
 This GUI project is MIT licensed. Nilesoft Shell itself is [MIT](LICENSE) by [moudey](https://github.com/moudey/shell).
+
+---
+
+Made with ❤️ by pxnz3r

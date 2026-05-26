@@ -1,36 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 180" width="600" height="180">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1a1a3e"><animate attributeName="stop-color" values="#1a1a3e;#0f2255;#1a1a3e" dur="6s" repeatCount="indefinite"/></stop>
-      <stop offset="50%" stop-color="#0f2255"><animate attributeName="stop-color" values="#0f2255;#1a1a3e;#0f2255" dur="6s" repeatCount="indefinite"/></stop>
-      <stop offset="100%" stop-color="#0a0a2e"><animate attributeName="stop-color" values="#0a0a2e;#162040;#0a0a2e" dur="6s" repeatCount="indefinite"/></stop>
+      <stop offset="0%" stop-color="#0f0f23"/>
+      <stop offset="100%" stop-color="#1a1a3e"/>
     </linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#6366f1"><animate attributeName="stop-color" values="#6366f1;#818cf8;#6366f1" dur="4s" repeatCount="indefinite"/></stop>
-      <stop offset="100%" stop-color="#a78bfa"><animate attributeName="stop-color" values="#a78bfa;#818cf8;#a78bfa" dur="4s" repeatCount="indefinite"/></stop>
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <rect width="600" height="180" rx="12" fill="url(#bg)"/>
-  <rect x="0" y="0" width="600" height="4" fill="url(#accent)"/>
-  <g transform="translate(50, 50)">
-    <rect x="0" y="0" width="220" height="90" rx="8" fill="#ffffff10" stroke="#ffffff20" stroke-width="1"/>
-    <rect x="10" y="10" width="200" height="16" rx="4" fill="#ffffff15"><animate attributeName="opacity" values="0.3;0.6;0.3" dur="2s" repeatCount="indefinite"/></rect>
-    <rect x="10" y="34" width="160" height="14" rx="4" fill="#ffffff12"/>
-    <rect x="10" y="54" width="140" height="14" rx="4" fill="#ffffff12"/>
-    <rect x="10" y="74" width="180" height="10" rx="4" fill="#ffffff08"/>
+  <rect width="800" height="200" rx="12" fill="url(#bg)"/>
+  <rect x="0" y="0" width="800" height="3" fill="url(#accent)"/>
+  <rect x="0" y="0" width="800" height="200" fill="url(#glow)" opacity="0.3">
+    <animate attributeName="opacity" values="0.2;0.4;0.2" dur="4s" repeatCount="indefinite"/>
+  </rect>
+  <g opacity="0.04">
+    <line x1="0" y1="50" x2="800" y2="50" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="100" x2="800" y2="100" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="150" x2="800" y2="150" stroke="#fff" stroke-width="0.5"/>
+    <line x1="200" y1="0" x2="200" y2="200" stroke="#fff" stroke-width="0.5"/>
+    <line x1="400" y1="0" x2="400" y2="200" stroke="#fff" stroke-width="0.5"/>
+    <line x1="600" y1="0" x2="600" y2="200" stroke="#fff" stroke-width="0.5"/>
   </g>
-  <text x="310" y="62" font-family="Segoe UI, sans-serif" font-size="22" font-weight="700" fill="#ffffff" letter-spacing="1">Nilesoft Shell GUI</text>
-  <text x="310" y="86" font-family="Segoe UI, sans-serif" font-size="13" fill="#a0a0c0">Visual editor for context menu config</text>
-  <g transform="translate(310, 100)">
-    <rect x="0" y="0" width="90" height="26" rx="6" fill="#6366f1" opacity="0.9"><animate attributeName="width" values="90;110;90" dur="3s" repeatCount="indefinite"/></rect>
-    <text x="16" y="17" font-family="monospace" font-size="11" fill="#fff">Streamlit</text>
+  <text x="50" y="80" font-family="Segoe UI, sans-serif" font-size="32" font-weight="700" fill="#ffffff" letter-spacing="1">Nilesoft Shell GUI</text>
+  <text x="50" y="110" font-family="Segoe UI, sans-serif" font-size="15" fill="#8888aa">Visual editor for Windows context menu config files</text>
+  <rect x="50" y="130" width="90" height="24" rx="6" fill="#6366f1" opacity="0.85"/>
+  <text x="56" y="146" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#ffffff">Streamlit</text>
+  <rect x="148" y="130" width="85" height="24" rx="6" fill="#ffffff10" stroke="#ffffff20" stroke-width="1"/>
+  <text x="155" y="146" font-family="Segoe UI, sans-serif" font-size="12" fill="#aaaacc">MIT License</text>
+  <g transform="translate(620, 40)">
+    <rect x="0" y="0" width="130" height="120" rx="8" fill="#ffffff06" stroke="#ffffff10" stroke-width="1"/>
+    <rect x="12" y="12" width="106" height="12" rx="3" fill="#ffffff10"/>
+    <rect x="12" y="30" width="80" height="10" rx="3" fill="#ffffff08"/>
+    <rect x="12" y="46" width="90" height="10" rx="3" fill="#ffffff08"/>
+    <rect x="12" y="62" width="70" height="10" rx="3" fill="#ffffff08"/>
+    <rect x="12" y="82" width="106" height="1" fill="#ffffff10"/>
+    <rect x="12" y="92" width="60" height="10" rx="3" fill="#ffffff08"/>
+    <rect x="78" y="92" width="40" height="10" rx="3" fill="#ffffff08"/>
   </g>
-  <text x="310" y="135" font-family="Segoe UI, sans-serif" font-size="11" fill="#606080">Made with</text>
-  <g transform="translate(370, 122)">
-    <path d="M0-6 A8 8 0 0 1 16-6 A8 8 0 0 1 32-6 Q32 4 16 16 Q0 4 0-6Z" fill="none" stroke="#ef4444" stroke-width="1.5">
-      <animate attributeName="d" values="M0-6 A8 8 0 0 1 16-6 A8 8 0 0 1 32-6 Q32 4 16 16 Q0 4 0-6Z;M0-4 A10 10 0 0 1 16-4 A10 10 0 0 1 32-4 Q32 6 16 18 Q0 6 0-4Z;M0-6 A8 8 0 0 1 16-6 A8 8 0 0 1 32-6 Q32 4 16 16 Q0 4 0-6Z" dur="1s" repeatCount="indefinite"/>
-      <animate attributeName="fill" values="#ef4444;#f87171;#ef4444" dur="1s" repeatCount="indefinite"/>
-    </path>
-  </g>
-  <text x="408" y="135" font-family="Segoe UI, sans-serif" font-size="11" fill="#606080">by pxnz3r</text>
 </svg>

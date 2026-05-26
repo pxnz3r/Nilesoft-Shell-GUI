@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/hero-banner.svg" alt="Nilesoft Shell GUI" width="600">
   <br><br>
-  <p>A visual editor for <a href="https://github.com/moudey/shell">Nilesoft Shell</a> context menu configuration &mdash; no manual <code>.nss</code> editing required.</p>
+  <p>A visual editor for <a href="https://github.com/moudey/shell">Nilesoft Shell</a> context menu configuration - no manual <code>.nss</code> editing required.</p>
   <p>
     <a href="https://github.com/pxnz3r/Nilesoft-Shell-GUI/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT"></a>
     <a href="https://streamlit.io"><img src="https://img.shields.io/badge/built%20with-Streamlit-FF4B4B?style=flat-square&logo=streamlit" alt="Streamlit"></a>
@@ -36,9 +36,9 @@ Opens at `http://localhost:8501`.
 
 For changes to take effect, Shell needs access to the `.nss` files:
 
-**Copy** &mdash; copy the repo files into your Shell install folder.
+**Copy** - copy the repo files into your Shell install folder.
 
-**Symlink** &mdash; run as admin for live editing:
+**Symlink** - run as admin for live editing:
 ```bat
 mklink /J "C:\Program Files\Nilesoft Shell\imports" "C:\full\path\to\Nilesoft-Shell-GUI\imports"
 mklink "C:\Program Files\Nilesoft Shell\shell.nss" "C:\full\path\to\Nilesoft-Shell-GUI\shell.nss"
@@ -52,7 +52,7 @@ After any change: **Ctrl + right-click** desktop &rarr; **Shell &rarr; Update ch
 
 | Tab | Purpose |
 |-----|---------|
-| Theme | Colors, 4-stop gradients, effects, border, shadow, font &mdash; 9 presets |
+| Theme | Colors, 4-stop gradients, effects, border, shadow, font - 9 presets |
 | Menu Items | Build custom entries (title, command, args, icon, conditions) |
 | Modify | Hide, reorder, or move built-in system menu items |
 | Settings | Priority, delay, tooltips, exclude condition |

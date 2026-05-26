@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/hero.svg" alt="Nilesoft Shell GUI" width="600">
+  <img src="https://raw.githubusercontent.com/pxnz3r/Nilesoft-Shell-GUI/master/assets/hero.svg" alt="Nilesoft Shell GUI" width="600">
 </div>
 
 ## Prerequisites

@@ -1,49 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0b0b1a"/>
-      <stop offset="100%" stop-color="#14142b"/>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff12"/>
+      <stop offset="100%" stop-color="#ffffff06"/>
     </linearGradient>
-    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#4f46e5"/>
-      <stop offset="50%" stop-color="#7c3aed"/>
-      <stop offset="100%" stop-color="#6366f1"/>
+    <linearGradient id="glass-hover" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff18"/>
+      <stop offset="100%" stop-color="#ffffff0a"/>
     </linearGradient>
-    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff08"/>
-      <stop offset="100%" stop-color="#ffffff04"/>
+    <linearGradient id="divider" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff00"/>
+      <stop offset="50%" stop-color="#ffffff15"/>
+      <stop offset="100%" stop-color="#ffffff00"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="200" rx="12" fill="url(#bg)"/>
-  <rect x="0" y="0" width="800" height="3" fill="url(#bar)"/>
-  <g transform="translate(45, 42)">
-    <rect x="0" y="0" width="200" height="116" rx="8" fill="url(#card)" stroke="#ffffff0a" stroke-width="0.5"/>
-    <rect x="0" y="0" width="4" height="116" rx="2" fill="#4f46e5"/>
-    <rect x="18" y="14" width="100" height="6" rx="3" fill="#ffffff30"/>
-    <rect x="18" y="28" width="80" height="5" rx="2.5" fill="#ffffff15"/>
-    <rect x="18" y="39" width="90" height="5" rx="2.5" fill="#ffffff15"/>
-    <rect x="18" y="50" width="70" height="5" rx="2.5" fill="#ffffff15"/>
-    <rect x="18" y="60" width="164" height="0.5" rx="0.25" fill="#ffffff15"/>
-    <rect x="18" y="70" width="85" height="5" rx="2.5" fill="#ffffff12"/>
-    <rect x="112" y="70" width="70" height="5" rx="2.5" fill="#ffffff12"/>
-    <rect x="18" y="84" width="60" height="5" rx="2.5" fill="#ffffff12"/>
-    <rect x="18" y="98" width="164" height="0.5" rx="0.25" fill="#ffffff15"/>
-    <rect x="18" y="104" width="164" height="6" rx="3" fill="#ffffff08"/>
-    <rect x="157" y="104" width="25" height="6" rx="3" fill="#4f46e5" opacity="0.6"/>
+  <rect width="800" height="200" rx="12" fill="#080808"/>
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0,0; 0,-8; 0,0; 0,8; 0,0" dur="6s" repeatCount="indefinite"/>
+    <g transform="translate(60, 38)">
+      <rect x="0" y="0" width="180" height="124" rx="10" fill="url(#glass)" stroke="#ffffff20" stroke-width="0.8"/>
+      <rect x="0" y="0" width="180" height="124" rx="10" fill="#ffffff04"/>
+      <rect x="14" y="14" width="90" height="6" rx="3" fill="#ffffff25"/>
+      <rect x="14" y="28" width="70" height="5" rx="2.5" fill="#ffffff12"/>
+      <rect x="14" y="40" width="80" height="5" rx="2.5" fill="#ffffff12"/>
+      <rect x="14" y="52" width="60" height="5" rx="2.5" fill="#ffffff12"/>
+      <rect x="14" y="62" width="152" height="0.5" fill="#ffffff10"/>
+      <rect x="14" y="72" width="75" height="5" rx="2.5" fill="#ffffff10"/>
+      <rect x="98" y="72" width="60" height="5" rx="2.5" fill="#ffffff10"/>
+      <rect x="14" y="86" width="50" height="5" rx="2.5" fill="#ffffff10"/>
+      <rect x="14" y="96" width="152" height="0.5" fill="#ffffff10"/>
+      <rect x="14" y="106" width="152" height="8" rx="4" fill="#ffffff08"/>
+      <rect x="140" y="106" width="26" height="8" rx="4" fill="#ffffff15"/>
+    </g>
   </g>
-  <text x="278" y="66" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#f0f0ff">Nilesoft Shell GUI</text>
-  <text x="278" y="92" font-family="Segoe UI, sans-serif" font-size="13" fill="#8888bb">A visual editor for Windows context menu config files</text>
-  <g transform="translate(278, 108)">
-    <rect x="0" y="0" width="82" height="22" rx="5" fill="#4f46e5"/>
-    <text x="10" y="15" font-family="Segoe UI, sans-serif" font-size="10" font-weight="600" fill="#fff">Streamlit</text>
-    <rect x="92" y="0" width="68" height="22" rx="5" fill="none" stroke="#ffffff15" stroke-width="1"/>
-    <text x="104" y="15" font-family="Segoe UI, sans-serif" font-size="10" fill="#9999bb">MIT</text>
-    <rect x="170" y="0" width="100" height="22" rx="5" fill="none" stroke="#ffffff15" stroke-width="1"/>
-    <text x="180" y="15" font-family="Segoe UI, sans-serif" font-size="10" fill="#9999bb">.nss editor</text>
-  </g>
-  <g opacity="0.06">
-    <circle cx="720" cy="30" r="60" fill="#4f46e5"/>
-    <circle cx="760" cy="150" r="80" fill="#7c3aed"/>
-    <circle cx="650" cy="180" r="40" fill="#6366f1"/>
+  <text x="275" y="66" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#f0f0f0">Nilesoft Shell GUI</text>
+  <text x="275" y="92" font-family="Segoe UI, sans-serif" font-size="13" fill="#666680">Visual editor for Windows context menu config files</text>
+  <g transform="translate(275, 108)">
+    <rect x="0" y="0" width="82" height="22" rx="5" fill="#ffffff12"/>
+    <text x="10" y="15" font-family="Segoe UI, sans-serif" font-size="10" font-weight="600" fill="#cccccc">Streamlit</text>
+    <rect x="92" y="0" width="64" height="22" rx="5" fill="none" stroke="#ffffff12" stroke-width="1"/>
+    <text x="104" y="15" font-family="Segoe UI, sans-serif" font-size="10" fill="#777788">.nss</text>
+    <rect x="166" y="0" width="56" height="22" rx="5" fill="none" stroke="#ffffff12" stroke-width="1"/>
+    <text x="177" y="15" font-family="Segoe UI, sans-serif" font-size="10" fill="#777788">MIT</text>
   </g>
 </svg>

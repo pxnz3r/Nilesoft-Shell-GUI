@@ -1,6 +1,12 @@
 import streamlit as st
 import os
 import re
+from html import escape
+import io
+import json
+import math
+import shutil
+import zipfile
 from datetime import datetime
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -73,11 +79,12 @@ PRESETS = {
 }
 
 DEFAULTS = {
-    "theme_name": "modern", "dark": "auto", "theme_view": "compact",
+    "theme_name": "modern", "dark": "default", "theme_view": "compact",
     "bg_color": "#0a0a1a", "bg_opacity": 100, "bg_effect": 2,
     "gradient_enabled": True, "grad_type": "linear",
     "lx1v": 0, "lx2v": 100, "ly1v": 0, "ly2v": 0,
-    "stops": [[0, "#0a0a1a"], [0.33, "#1a1a3e"], [0.66, "#0f2255"], [1, "#0a0a2e"]],
+    "rcx": 100, "rcy": 100, "rr": 150, "rfx": 100, "rfy": 100,
+    "stops": [[0.0, "#0a0a1a"], [0.33, "#1a1a3e"], [0.66, "#0f2255"], [1.0, "#0a0a2e"]],
     "text_normal": "#ffffff", "text_select": "#ffffff",
     "item_bg_normal": "none", "item_bg_select": "#ffffff20", "item_radius": 0,
     "img_c1": "#cccccc", "img_c2": "#aaaaaa", "img_c3": "#888888", "img_align": 2,
@@ -85,17 +92,173 @@ DEFAULTS = {
     "border_opacity": 50, "border_radius": 4,
     "shadow_enabled": True, "shadow_size": 8, "shadow_color": "#000000",
     "shadow_opacity": 40, "shadow_offset": 2,
-    "customize_font": False, "font_size": 9, "font_name": "Segoe UI", "font_weight": 4,
+    "customize_font": False, "font_size": 9, "font_name": "Segoe UI", "font_weight": 4, "font_italic": False,
+}
+MAX_STOPS = 6
+# Widget limits; values read from theme.nss are clamped so out-of-range numbers can't crash a slider.
+RANGES = {
+    "bg_opacity": (0, 100), "bg_effect": (0, 3), "item_radius": (0, 3), "img_align": (0, 2),
+    "lx1v": (0, 100), "lx2v": (0, 100), "ly1v": (0, 100), "ly2v": (0, 100),
+    "rcx": (0, 100), "rcy": (0, 100), "rr": (0, 200), "rfx": (0, 100), "rfy": (0, 100),
+    "border_size": (0, 10), "border_opacity": (0, 100), "border_radius": (0, 20),
+    "shadow_size": (0, 30), "shadow_opacity": (0, 100), "shadow_offset": (0, 30),
+    "font_size": (6, 24), "font_weight": (1, 9),
 }
 
-if "preset" not in st.session_state:
-    st.session_state.preset = "Navy Indigo"
 
-def apply_preset(name):
-    p = PRESETS[name]
-    for k in ["bg_color", "bg_opacity", "bg_effect", "stops", "text_normal", "text_select", "img_c1", "img_c2", "img_c3"]:
-        st.session_state[k] = p[k]
-    st.session_state.preset = name
+def read_file_safe(path):
+    """Read a text file as UTF-8 (BOM stripped), falling back to cp1252. Missing file -> ''."""
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            return f.read()
+    except FileNotFoundError:
+        return ""
+    except UnicodeDecodeError:
+        with open(path, "r", encoding="cp1252") as f:
+            return f.read()
+
+
+def hex6(value):
+    """Normalize #rgb / #rrggbb to #rrggbb, or None for anything a color picker can't show."""
+    m = re.fullmatch(r"#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})", value.strip())
+    if not m: return None
+    h = m.group(1)
+    return "#" + (h if len(h) == 6 else "".join(c * 2 for c in h)).lower()
+
+
+def parse_theme(text):
+    """Read the values the editor understands from a theme.nss. Anything unrecognized keeps its default."""
+    def block(name, src):
+        m = re.search(rf"\b{name}\s*\{{", src)
+        if not m: return None
+        depth, i = 1, m.end()
+        while i < len(src) and depth:
+            depth += {"{": 1, "}": -1}.get(src[i], 0)
+            i += 1
+        return src[m.end():i - 1]
+
+    def own(src):
+        """Drop nested blocks so only this block's direct properties remain."""
+        prev = None
+        while prev != src:
+            prev, src = src, re.sub(r"\w+\s*\{[^{}]*\}", "", src)
+        return src
+
+    def val(key, src):
+        if src is None: return None
+        m = re.search(rf"(?m)^\s*{re.escape(key)}\s*=\s*(.+?)\s*(?://.*)?$", src)
+        return m.group(1).strip("\"'") if m else None
+
+    def num(x):
+        return int(x) if x is not None and re.fullmatch(r"\d+", x) else None
+
+    def flag(x):
+        return None if x is None else x.lower() in ("true", "1")
+
+    v = {}
+    theme = block("theme", text)
+    if theme is None: return v
+    top = own(theme)
+    if val("name", top) in ("modern", "classic", "white", "black"): v["theme_name"] = val("name", top)
+    dark = val("dark", top)
+    if dark in ("default", "auto", "true", "false"): v["dark"] = "default" if dark == "auto" else dark
+    view = (val("view", top) or "").replace("view.", "")
+    if view in ("auto", "compact", "small", "medium", "large", "wide"): v["theme_view"] = view
+
+    bg = block("background", theme)
+    if bg is not None:
+        bg_own = own(bg)
+        v.update({k: x for k, x in (("bg_color", hex6(val("color", bg_own) or "")), ("bg_opacity", num(val("opacity", bg_own))),
+                                    ("bg_effect", num(val("effect", bg_own)))) if x is not None})
+        grad = block("gradient", bg)
+        v["gradient_enabled"] = grad is not None and flag(val("enabled", grad)) is not False
+        if grad is not None:
+            lin = re.search(r"linear\s*=\s*\[([^\]]*)\]", grad)
+            rad = re.search(r"radial\s*=\s*\[([^\]]*)\]", grad)
+            nums = lambda m: [int(float(n)) for n in re.findall(r"-?[\d.]+", m.group(1))]
+            if rad:
+                v["grad_type"] = "radial"
+                v.update(zip(["rcx", "rcy", "rr", "rfx", "rfy"], nums(rad)))
+            elif lin:
+                v["grad_type"] = "linear"
+                v.update(zip(["lx1v", "lx2v", "ly1v", "ly2v"], nums(lin)))
+            stops = [[float(o), hex6(c)] for o, c in re.findall(r"\[\s*([\d.]+)\s*,\s*(#[0-9a-fA-F]{3,6})\b", grad)]
+            if len(stops) >= 2: v["stops"] = stops[:MAX_STOPS]
+
+    item = block("item", theme)
+    if item is not None:
+        if num(val("radius", own(item))) is not None: v["item_radius"] = num(val("radius", own(item)))
+        for sub, prefix in (("text", "text_"), ("back", "item_bg_")):
+            b = block(sub, item)
+            for state in ("normal", "select"):
+                x = val(state, b)
+                if x is None: continue
+                if prefix == "text_":
+                    if hex6(x): v[prefix + state] = hex6(x)
+                else:
+                    v[prefix + state] = x
+
+    image = block("image", theme)
+    if image is not None:
+        colors = re.findall(r"#[0-9a-fA-F]{3,6}\b", val("color", own(image)) or "")
+        for k, c in zip(["img_c1", "img_c2", "img_c3"], colors): v[k] = hex6(c)
+        if num(val("align", own(image))) in (0, 1, 2): v["img_align"] = num(val("align", own(image)))
+
+    for name in ("border", "shadow"):
+        b = block(name, theme)
+        v[f"{name}_enabled"] = b is not None and flag(val("enabled", b)) is not False
+        if b is None: continue
+        for k in ("size", "opacity", "radius", "offset"):
+            if num(val(k, b)) is not None: v[f"{name}_{k}"] = num(val(k, b))
+        if hex6(val("color", b) or ""): v[f"{name}_color"] = hex6(val("color", b))
+
+    font = block("font", theme)
+    v["customize_font"] = font is not None
+    if font is not None:
+        if val("name", font): v["font_name"] = val("name", font)
+        for k in ("size", "weight"):
+            if num(val(k, font)) is not None: v[f"font_{k}"] = num(val(k, font))
+        v["font_italic"] = bool(flag(val("italic", font)))
+    for k, (lo, hi) in RANGES.items():
+        if k in v: v[k] = max(lo, min(hi, v[k]))
+    return {k: x for k, x in v.items() if k in DEFAULTS}
+
+
+def load_theme_state(values):
+    """Push theme values into widget state. Only call before the theme widgets render (or from a callback)."""
+    for k, x in values.items():
+        if k == "stops":
+            st.session_state.num_stops = len(x)
+            for i, (off, col) in enumerate(x):
+                st.session_state[f"so_{i}"] = float(off)
+                st.session_state[f"sc_{i}"] = col
+        else:
+            st.session_state[k] = x
+
+
+def current_stops():
+    s = st.session_state
+    n = int(s.get("num_stops", len(DEFAULTS["stops"])))
+    if not all(f"so_{i}" in s and f"sc_{i}" in s for i in range(n)):
+        return DEFAULTS["stops"]
+    return [[round(s[f"so_{i}"], 2), s[f"sc_{i}"]] for i in range(n)]
+
+
+def apply_preset():
+    name = st.session_state.preset_selector
+    if name:
+        load_theme_state(PRESETS[name])
+
+
+if "_theme_loaded" not in st.session_state:
+    load_theme_state({**DEFAULTS, **parse_theme(read_file_safe(THEME_PATH))})
+    st.session_state._theme_loaded = True
+if "_pending_state" in st.session_state:
+    load_theme_state(st.session_state.pop("_pending_state"))
+# Re-assign theme keys so Streamlit keeps them while their widgets are hidden (e.g. font options toggled off).
+for _k in list(st.session_state.keys()):
+    if _k in DEFAULTS or re.fullmatch(r"(so|sc)_\d+|num_stops", _k):
+        st.session_state[_k] = st.session_state[_k]
 
 st.set_page_config(page_title="Nilesoft Shell GUI", page_icon="🎨", layout="wide")
 st.markdown("""
@@ -127,29 +290,29 @@ st.markdown("Visually customize your Windows context menu — no manual editing.
 
 IMPORTS_DIR = os.path.join(_SCRIPT_DIR, "imports")
 
-def read_file_safe(path):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read()
-    except:
-        try:
-            with open(path, "r", encoding="cp1252") as f:
-                return f.read()
-        except:
-            return ""
-
 def parse_shell_settings(content):
     s = {"priority": "1", "showdelay": "200", "tip_enabled": True, "remove_duplicate": True, "exclude_where": ""}
-    for line in content.split("\n"):
-        line = line.strip()
-        if line.startswith("priority="): s["priority"] = line.split("=", 1)[1]
-        elif line.startswith("showdelay="): s["showdelay"] = line.split("=", 1)[1]
-        elif line.startswith("tip.enabled="): s["tip_enabled"] = line.split("=", 1)[1] == "1" or line.split("=", 1)[1].lower() == "true"
-        elif line.startswith("modify.remove.duplicate="): s["remove_duplicate"] = line.split("=", 1)[1] == "1" or line.split("=", 1)[1].lower() == "true"
-        elif line.startswith("exclude.where"):
-            if "=" in line:
-                s["exclude_where"] = line.split("=", 1)[1].strip()
+    m = re.search(r"settings\s*\{([^}]*)\}", content)
+    for line in (m.group(1) if m else "").split("\n"):
+        kv = re.match(r"\s*([\w.]+)\s*=\s*(.*?)\s*$", line)
+        if not kv: continue
+        key, value = kv.groups()
+        if key == "priority" and value.isdigit(): s["priority"] = value
+        elif key == "showdelay" and value.isdigit(): s["showdelay"] = value
+        elif key == "tip.enabled": s["tip_enabled"] = value.lower() in ("1", "true")
+        elif key == "modify.remove.duplicate": s["remove_duplicate"] = value.lower() in ("1", "true")
+        elif key == "exclude.where": s["exclude_where"] = value
     return s
+
+
+def nss_str(value):
+    """Quote a value as an NSS string, picking a quote char the value doesn't contain."""
+    return f'"{value}"' if "'" in value else f"'{value}'"
+
+
+def import_paths(shell_text):
+    """Paths from import lines in shell.nss, skipping commented-out lines."""
+    return re.findall(r"(?m)^\s*import\s+['\"]([^'\"]+)['\"]", shell_text)
 
 BACKUP_DIR = os.path.join(_SCRIPT_DIR, "backups")
 os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -160,11 +323,8 @@ def backup_file(filepath):
     try:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         fname = os.path.basename(filepath)
-        bak = os.path.join(BACKUP_DIR, f"{fname}.{ts}")
-        with open(filepath, "r", encoding="utf-8") as src:
-            with open(bak, "w", encoding="utf-8") as dst:
-                dst.write(src.read())
-    except Exception as e:
+        shutil.copy2(filepath, os.path.join(BACKUP_DIR, f"{fname}.{ts}"))
+    except OSError as e:
         st.warning(f"Backup failed for {filepath}: {e}")
 
 def list_backups(filepath):
@@ -174,8 +334,8 @@ def list_backups(filepath):
     backups = []
     if not os.path.isdir(BACKUP_DIR): return backups
     for b in os.listdir(BACKUP_DIR):
-        if b.startswith(pattern):
-            ts = b[len(pattern):]
+        ts = b[len(pattern):]
+        if b.startswith(pattern) and re.fullmatch(r"\d{8}_\d{6}", ts):
             backups.append((ts, os.path.join(BACKUP_DIR, b)))
     return sorted(backups, reverse=True)
 
@@ -188,11 +348,7 @@ with main_tab_items:
     st.caption("Define new items and submenus. Saved to `imports/custom.nss`.")
 
     if not os.path.exists(CUSTOM_PATH):
-        st.info("`custom.nss` doesn't exist yet. Append your first item to create it.")
-        if st.button("➕ Add import to shell.nss automatically"):
-            with open(SHELL_PATH, "a", encoding="utf-8") as f:
-                f.write("\nimport 'imports/custom.nss'\n")
-            st.success("Added `import 'imports/custom.nss'` to shell.nss")
+        st.info("`custom.nss` doesn't exist yet. Append your first item to create it (the import is added to shell.nss for you).")
 
     with st.container(border=True):
         col_a, col_b = st.columns(2)
@@ -214,11 +370,11 @@ with main_tab_items:
 
     st.markdown("### Preview")
     parts = []
-    if item_type: parts.append(f'type={item_type}')
+    if item_type: parts.append(f"type={nss_str(item_type.strip(chr(39) + chr(34)))}")
     if item_where: parts.append(f"where={item_where}")
-    cmd_str = f"cmd='{item_cmd}'"
-    if item_args: cmd_str += f" args='{item_args}'"
-    parts.append(f"title='{item_title}'")
+    cmd_str = f"cmd={nss_str(item_cmd)}"
+    if item_args: cmd_str += f" args={nss_str(item_args)}"
+    parts.append(f"title={nss_str(item_title)}")
     parts.append(cmd_str)
     if item_sep != "none": parts.append(f'sep=sep.{item_sep}')
     if item_admin: parts.append("admin")
@@ -227,32 +383,27 @@ with main_tab_items:
     preview_code = f"item({indent}{indent.join(parts)}\n)"
     st.code(preview_code, language="nss")
 
-    if st.button("➕ Append to custom.nss", type="primary", use_container_width=True):
+    if st.button("➕ Append to custom.nss", type="primary", width="stretch"):
         try:
-            backup_file(CUSTOM_PATH) if os.path.exists(CUSTOM_PATH) else None
+            backup_file(CUSTOM_PATH)
             with open(CUSTOM_PATH, "a", encoding="utf-8") as f:
                 f.write("\n" + preview_code + "\n")
             shell_raw = read_file_safe(SHELL_PATH)
-            import_q_single = "import 'imports/custom.nss'"
-            import_q_double = 'import "imports/custom.nss"'
-            if import_q_single not in shell_raw and import_q_double not in shell_raw:
+            if "imports/custom.nss" not in import_paths(shell_raw):
                 backup_file(SHELL_PATH)
                 with open(SHELL_PATH, "a", encoding="utf-8") as sf:
-                    sf.write(f"\n{import_q_single}\n")
+                    sf.write("\nimport 'imports/custom.nss'\n")
             st.success("Appended!")
-        except Exception as e:
+        except OSError as e:
             st.error(f"Failed to write: {e}")
 
-    custom_content = ""
-    if os.path.exists(CUSTOM_PATH):
-        with open(CUSTOM_PATH, "r", encoding="utf-8") as f:
-            custom_content = f.read()
+    custom_content = read_file_safe(CUSTOM_PATH)
     if custom_content.strip():
         with st.expander("📄 Current custom.nss", expanded=False):
             st.code(custom_content, language="nss")
 
     with st.expander("📋 Item Library — pre-built templates"):
-        st.caption("Click an item to copy its NSS code, then paste into your custom.nss or edit above.")
+        st.caption("Use the copy icon on a snippet, then paste it into custom.nss (📂 Imports tab).")
         templates = [
             ("Open folder in VS Code", "item(title='Open in VS Code' image=\\uE26E cmd='code' args='\"@sel.path\"')"),
             ("Copy file path", "item(title='Copy Path' image=icon.copy_path cmd=command.copy(sel.path))"),
@@ -266,9 +417,8 @@ with main_tab_items:
             ("Open PowerShell here", "item(title='Windows PowerShell' image cmd='powershell.exe' args='-noexit -command Set-Location -Path \"@sel.dir\\.\"')"),
         ]
         for label, code in templates:
-            if st.button(f"📋 {label}", key=f"tmpl_{label}", use_container_width=True):
-                st.toast(f"Copied: {label}")
-                st.session_state["copied_template"] = code
+            st.markdown(f"**{label}**")
+            st.code(code, language="nss")
 
 with main_tab_modify:
     st.markdown("## Modify & reorder items")
@@ -297,7 +447,8 @@ with main_tab_modify:
                 help="'file', 'dir', 'dir.back|drive.back', blank = all")
             mod_menu = st.text_input("Target menu", "file manage", key="mm",
                 help="Where to move it")
-            mod_pos = st.selectbox("Position", ["", "top", "bottom", "1", "2", "last"], key="mp")
+            mod_pos = st.selectbox("Position", ["", "top", "middle", "bottom", "0", "1", "2"], key="mp",
+                help="Blank = keep current position")
             mod_sep = st.selectbox("Separator", ["none", "top", "bottom", "both"], key="ms")
 
     st.markdown("### Preview")
@@ -306,7 +457,8 @@ with main_tab_modify:
     if not mod_target and not mod_target_custom:
         mod_lines.append("// Select a target item or enter a custom pattern above")
     elif mod_action == "Hide (remove)":
-        mod_lines.append(f"modify(where={target_expr} vis=vis.remove)")
+        type_part = f'type="{mod_where_type}" ' if mod_where_type else ""
+        mod_lines.append(f"modify({type_part}where={target_expr} vis=vis.remove)")
     else:
         parts = [f"where={target_expr}"]
         if mod_where_type: parts.insert(0, f'type="{mod_where_type}"')
@@ -318,19 +470,17 @@ with main_tab_modify:
     mod_code = "\n".join(mod_lines)
     st.code(mod_code, language="nss")
 
-    if st.button("➕ Append to modify.nss", type="primary", use_container_width=True):
+    if st.button("➕ Append to modify.nss", type="primary", width="stretch",
+                 disabled=not (mod_target or mod_target_custom)):
         try:
             backup_file(MODIFY_PATH)
             with open(MODIFY_PATH, "a", encoding="utf-8") as f:
                 f.write("\n" + mod_code + "\n")
             st.success("Appended!")
-        except Exception as e:
+        except OSError as e:
             st.error(f"Failed to write modify.nss: {e}")
 
-    mod_content = ""
-    if os.path.exists(MODIFY_PATH):
-        with open(MODIFY_PATH, "r") as f:
-            mod_content = f.read()
+    mod_content = read_file_safe(MODIFY_PATH)
     if mod_content.strip():
         with st.expander("📄 Current modify.nss", expanded=False):
             st.code(mod_content, language="nss")
@@ -383,9 +533,9 @@ with main_tab_settings:
     with col_a:
         with st.container(border=True):
             st.markdown("**General**")
-            s_priority = st.number_input("Priority", 0, 10, int(shell_settings["priority"]),
+            s_priority = st.number_input("Priority", 0, 10, min(int(shell_settings["priority"]), 10),
                 help="Higher = menus load after others (default 1)")
-            s_showdelay = st.number_input("Show delay (ms)", 0, 2000, int(shell_settings["showdelay"]),
+            s_showdelay = st.number_input("Show delay (ms)", 0, 2000, min(int(shell_settings["showdelay"]), 2000),
                 help="Delay before menu appears (default 200)")
             s_exclude = st.text_input("Exclude condition", shell_settings["exclude_where"],
                 help="e.g. !process.is_explorer to only show in Explorer")
@@ -405,7 +555,7 @@ with main_tab_settings:
     tip.enabled={"true" if s_tip else "false"}
 }}""", language="nss")
 
-    if st.button("💾 Write settings to shell.nss", type="primary", use_container_width=True):
+    if st.button("💾 Write settings to shell.nss", type="primary", width="stretch"):
         try:
             backup_file(SHELL_PATH)
             new_settings = "settings\n{\n"
@@ -423,40 +573,28 @@ with main_tab_settings:
             with open(SHELL_PATH, "w", encoding="utf-8") as f:
                 f.write(new_content)
             st.toast("✅ Settings written to shell.nss!", icon="✅")
-        except Exception as e:
+        except OSError as e:
             st.error(f"Failed to write settings: {e}")
 
 with main_tab_imports:
     st.markdown("## 📂 Import Manager")
     st.caption("View and toggle all imported `.nss` files.")
 
-    imports_content = read_file_safe(SHELL_PATH)
-    import_lines = [l.strip() for l in imports_content.split("\n") if l.strip().startswith("import")]
+    import_files = import_paths(read_file_safe(SHELL_PATH))
+    available = sorted(f for f in os.listdir(IMPORTS_DIR) if f.endswith(".nss")) if os.path.isdir(IMPORTS_DIR) else []
 
     st.markdown("### Current imports in shell.nss")
-    import_files = []
-    for l in import_lines:
-        path = l.split("'")[1] if "'" in l else l.split('"')[1]
-        import_files.append(path)
-
-    available = []
-    if os.path.isdir(IMPORTS_DIR):
-        available = sorted([f for f in os.listdir(IMPORTS_DIR) if f.endswith(".nss")])
-
     col_a, col_b = st.columns([1, 1])
     with col_a:
         with st.container(border=True):
             st.markdown("**Imported**")
             for f in import_files:
-                fname = os.path.basename(f.replace("imports/", ""))
-                st.markdown(f"- `{fname}`")
+                st.markdown(f"- `{f}`")
     with col_b:
         with st.container(border=True):
             st.markdown("**Available in imports/**")
             for f in available:
-                full_path = os.path.join("imports", f)
-                is_imported = full_path in import_files or f"'{full_path}'" in import_lines or f'"{full_path}"' in import_lines
-                st.markdown(f"- `{f}` {'✅' if is_imported else '❌ Not imported'}")
+                st.markdown(f"- `{f}` {'✅' if f'imports/{f}' in import_files else '❌ Not imported'}")
 
     with st.container(border=True):
         st.markdown("**Quick actions**")
@@ -466,57 +604,68 @@ with main_tab_imports:
             col1, col2, col3 = st.columns([2, 1, 1])
             with col1: st.text(f)
             with col2:
-                if st.button("Open", key=f"open_{f}", use_container_width=True):
-                    fp = os.path.join(IMPORTS_DIR, f)
-                    content = read_file_safe(fp)
-                    st.session_state[f"editor_{f}"] = content
+                if st.button("Open", key=f"open_{f}", width="stretch"):
+                    st.session_state[f"editor_{f}"] = read_file_safe(os.path.join(IMPORTS_DIR, f))
+                    st.session_state.pop(f"area_{f}", None)
             with col3:
                 label = "Remove import" if is_in else "Add import"
-                if st.button(label, key=f"toggle_{f}", use_container_width=True):
+                if st.button(label, key=f"toggle_{f}", width="stretch"):
                     try:
+                        backup_file(SHELL_PATH)
+                        shell_text = read_file_safe(SHELL_PATH)
                         if is_in:
-                            lines = open(SHELL_PATH, "r").readlines()
-                            lines = [l for l in lines if f"import '{full_ref}'" not in l and f'import "{full_ref}"' not in l]
-                            open(SHELL_PATH, "w", encoding="utf-8").writelines(lines)
+                            shell_text = re.sub(rf"(?m)^\s*import\s+['\"]{re.escape(full_ref)}['\"].*\n?", "", shell_text)
                         else:
-                            with open(SHELL_PATH, "a") as sf:
-                                sf.write(f"\nimport '{full_ref}'")
+                            shell_text = shell_text.rstrip("\n") + f"\nimport '{full_ref}'\n"
+                        with open(SHELL_PATH, "w", encoding="utf-8") as sf:
+                            sf.write(shell_text)
                         st.rerun()
-                    except Exception as e:
+                    except OSError as e:
                         st.error(f"Failed to update imports: {e}")
-            if st.session_state.get(f"editor_{f}"):
+            if f"editor_{f}" in st.session_state:
                 with st.expander(f"📄 {f}", expanded=True):
-                    edited = st.text_area(f"Edit {f}", st.session_state[f"editor_{f}"], height=200, key=f"area_{f}")
-                    if st.button(f"💾 Save {f}", key=f"save_{f}"):
+                    edited = st.text_area(f"Edit {f}", st.session_state[f"editor_{f}"], height=300, key=f"area_{f}")
+                    save_col, close_col = st.columns(2)
+                    if save_col.button(f"💾 Save {f}", key=f"save_{f}", width="stretch"):
                         try:
                             backup_file(os.path.join(IMPORTS_DIR, f))
                             with open(os.path.join(IMPORTS_DIR, f), "w", encoding="utf-8") as fp:
                                 fp.write(edited)
                             st.success(f"Saved {f}!")
-                        except Exception as e:
+                        except OSError as e:
                             st.error(f"Failed to save {f}: {e}")
+                    if close_col.button("✖ Close", key=f"close_{f}", width="stretch"):
+                        st.session_state.pop(f"editor_{f}")
+                        st.session_state.pop(f"area_{f}", None)
+                        st.rerun()
 
     with st.expander("✅ Syntax Checker — validate NSS files"):
         st.caption("Checks for common issues: unmatched braces, parens, and invalid syntax.")
         sc_file = st.selectbox("Select file to check", ["shell.nss"] + sorted([f for f in os.listdir(IMPORTS_DIR) if f.endswith(".nss")]), key="sc_file")
         sc_path = SHELL_PATH if sc_file == "shell.nss" else os.path.join(IMPORTS_DIR, sc_file)
         sc_content = read_file_safe(sc_path)
-        if st.button("🔍 Check Syntax", key="sc_check", use_container_width=True):
+        if st.button("🔍 Check Syntax", key="sc_check", width="stretch"):
             errors = []
             lines = sc_content.split("\n")
             brace_depth = 0
             paren_depth = 0
-            in_sq = in_dq = False
+            in_sq = in_dq = in_block = False
             for ln, line in enumerate(lines, 1):
-                stripped = line.strip()
-                if stripped.startswith("//") or stripped.startswith("#"): continue
                 i = 0
                 while i < len(line):
                     c = line[i]
-                    if c == "'" and not in_dq: in_sq = not in_sq
+                    if in_block:
+                        if line.startswith("*/", i):
+                            in_block = False
+                            i += 1
+                    elif c == "'" and not in_dq: in_sq = not in_sq
                     elif c == '"' and not in_sq: in_dq = not in_dq
                     elif not in_sq and not in_dq:
-                        if c == "{": brace_depth += 1
+                        if line.startswith("//", i): break
+                        if line.startswith("/*", i):
+                            in_block = True
+                            i += 1
+                        elif c == "{": brace_depth += 1
                         elif c == "}": brace_depth -= 1
                         elif c == "(": paren_depth += 1
                         elif c == ")": paren_depth -= 1
@@ -540,23 +689,21 @@ with main_tab_imports:
 
 with main_tab_theme:
     st.markdown("## 🎨 Theme editor")
-    st.caption("Customize the look of your context menu.")
+    st.caption("Customize the look of your context menu. Values start from your current `imports/theme.nss`.")
 
-    preset_cols = st.columns([2, 1])
+    preset_cols = st.columns([2, 1, 1])
     with preset_cols[0]:
-        selected = st.selectbox("Color scheme preset", list(PRESETS.keys()),
-            index=list(PRESETS.keys()).index(st.session_state.preset), key="preset_selector")
-        if selected != st.session_state.preset:
-            apply_preset(selected)
-            st.rerun()
+        st.selectbox("Color scheme preset", list(PRESETS.keys()), index=None, placeholder="Pick a preset to apply...",
+            key="preset_selector", on_change=apply_preset)
     with preset_cols[1]:
         st.markdown("")
         st.markdown("")
-        if st.button("↺ Reset defaults", use_container_width=True):
-            for k in DEFAULTS:
-                st.session_state.pop(k, None)
-            st.session_state.preset = "Navy Indigo"
-            st.rerun()
+        st.button("📖 Reload theme.nss", width="stretch", help="Discard unsaved edits and read the file again",
+            on_click=lambda: load_theme_state({**DEFAULTS, **parse_theme(read_file_safe(THEME_PATH))}))
+    with preset_cols[2]:
+        st.markdown("")
+        st.markdown("")
+        st.button("↺ Reset defaults", width="stretch", on_click=lambda: load_theme_state(DEFAULTS))
 
     sub_bg, sub_item, sub_icon, sub_border, sub_shadow, sub_font = st.tabs(
         ["🎨 Background", "📝 Items", "🖼️ Icons", "🧱 Border", "🌓 Shadow", "🔤 Font"]
@@ -568,87 +715,76 @@ with main_tab_theme:
             with st.container(border=True):
                 st.markdown("**General**")
                 theme_name = st.selectbox("Theme name", ["modern", "classic", "white", "black"],
-                    index=["modern", "classic", "white", "black"].index(st.session_state.get("theme_name", DEFAULTS["theme_name"])),
                     key="theme_name")
-                dark = st.selectbox("Dark mode", ["auto", "true", "false"],
-                    index=["auto", "true", "false"].index(st.session_state.get("dark", DEFAULTS["dark"])),
-                    key="dark")
-                theme_view = st.selectbox("Menu density", ["compact", "small", "medium", "large", "wide"],
-                    index=["compact", "small", "medium", "large", "wide"].index(st.session_state.get("theme_view", DEFAULTS["theme_view"])),
+                dark = st.selectbox("Dark mode", ["default", "true", "false"],
+                    help="default follows the Windows app mode", key="dark")
+                theme_view = st.selectbox("Menu density", ["auto", "compact", "small", "medium", "large", "wide"],
                     key="theme_view")
-                bg_color = st.color_picker("Base color", st.session_state.get("bg_color", DEFAULTS["bg_color"]), key="bg_color")
-                bg_opacity = st.slider("Opacity", 0, 100, st.session_state.get("bg_opacity", DEFAULTS["bg_opacity"]), key="bg_opacity")
+                bg_color = st.color_picker("Base color", key="bg_color")
+                bg_opacity = st.slider("Opacity", 0, 100, key="bg_opacity")
                 bg_effect = st.selectbox("Effect", [0, 1, 2, 3],
-                    index=[0, 1, 2, 3].index(st.session_state.get("bg_effect", DEFAULTS["bg_effect"])),
                     format_func=lambda x: {0: "0 - Solid", 1: "1 - Transparent", 2: "2 - Blur", 3: "3 - Acrylic"}[x],
                     key="bg_effect")
         with c2:
             with st.container(border=True):
                 st.markdown("**Gradient**")
-                gradient_enabled = st.toggle("Enable", st.session_state.get("gradient_enabled", DEFAULTS["gradient_enabled"]), key="gradient_enabled")
+                gradient_enabled = st.toggle("Enable", key="gradient_enabled")
                 if gradient_enabled:
-                    grad_type = st.selectbox("Type", ["linear", "radial"],
-                        index=["linear", "radial"].index(st.session_state.get("grad_type", DEFAULTS["grad_type"])), key="grad_type")
+                    grad_type = st.selectbox("Type", ["linear", "radial"], key="grad_type")
                     if grad_type == "linear":
                         cols = st.columns(4)
-                        with cols[0]: lx1v = st.number_input("X1", 0, 100, st.session_state.get("lx1v", 0), key="lx1v")
-                        with cols[1]: lx2v = st.number_input("X2", 0, 100, st.session_state.get("lx2v", 100), key="lx2v")
-                        with cols[2]: ly1v = st.number_input("Y1", 0, 100, st.session_state.get("ly1v", 0), key="ly1v")
-                        with cols[3]: ly2v = st.number_input("Y2", 0, 100, st.session_state.get("ly2v", 0), key="ly2v")
+                        with cols[0]: lx1v = st.number_input("X1", 0, 100, key="lx1v")
+                        with cols[1]: lx2v = st.number_input("X2", 0, 100, key="lx2v")
+                        with cols[2]: ly1v = st.number_input("Y1", 0, 100, key="ly1v")
+                        with cols[3]: ly2v = st.number_input("Y2", 0, 100, key="ly2v")
                     else:
                         cols = st.columns(5)
-                        with cols[0]: rcx = st.number_input("CX", 0, 100, 100)
-                        with cols[1]: rcy = st.number_input("CY", 0, 100, 100)
-                        with cols[2]: rr = st.number_input("R", 0, 200, 150)
-                        with cols[3]: rfx = st.number_input("FX", 0, 100, 100)
-                        with cols[4]: rfy = st.number_input("FY", 0, 100, 100)
-                    stops_data = st.session_state.get("stops", DEFAULTS["stops"])
-                    num_stops = st.number_input("Stops", min_value=2, max_value=6, value=len(stops_data), key="num_stops")
-                    stops = []
+                        with cols[0]: rcx = st.number_input("CX", 0, 100, key="rcx")
+                        with cols[1]: rcy = st.number_input("CY", 0, 100, key="rcy")
+                        with cols[2]: rr = st.number_input("R", 0, 200, key="rr")
+                        with cols[3]: rfx = st.number_input("FX", 0, 100, key="rfx")
+                        with cols[4]: rfy = st.number_input("FY", 0, 100, key="rfy")
+                    num_stops = st.number_input("Stops", min_value=2, max_value=MAX_STOPS, key="num_stops")
                     for i in range(int(num_stops)):
+                        st.session_state.setdefault(f"so_{i}", round(i / (num_stops - 1), 2))
+                        st.session_state.setdefault(f"sc_{i}", "#000000")
                         sc1, sc2 = st.columns([1, 2])
                         with sc1:
-                            off = st.slider(f"S{i+1}", 0.0, 1.0,
-                                value=float(stops_data[i][0] if i < len(stops_data) else i / (num_stops - 1) if num_stops > 1 else 0.5),
-                                step=0.01, key=f"so_{i}", label_visibility="collapsed")
+                            st.slider(f"S{i+1}", 0.0, 1.0, step=0.01, key=f"so_{i}", label_visibility="collapsed")
                         with sc2:
-                            col = st.color_picker(f"C{i+1}", stops_data[i][1] if i < len(stops_data) else "#000000",
-                                key=f"sc_{i}", label_visibility="collapsed")
-                        stops.append([off, col])
-                    grad_bar = "linear-gradient(to right" + "".join(f", {s[1]} {int(s[0]*100)}%" for s in stops) + ")"
+                            st.color_picker(f"C{i+1}", key=f"sc_{i}", label_visibility="collapsed")
+                    grad_bar = "linear-gradient(to right" + "".join(f", {c} {int(o*100)}%" for o, c in current_stops()) + ")"
                     st.markdown(f'<div style="height:20px;border-radius:6px;border:1px solid #444;background:{grad_bar};margin-top:8px"></div>', unsafe_allow_html=True)
-                else:
-                    stops = DEFAULTS["stops"]
+                stops = current_stops()
 
     with sub_item:
         c1, c2 = st.columns(2)
         with c1:
             with st.container(border=True):
                 st.markdown("**Text colors**")
-                text_normal = st.color_picker("Normal", st.session_state.get("text_normal", DEFAULTS["text_normal"]), key="text_normal")
-                text_select = st.color_picker("Hover", st.session_state.get("text_select", DEFAULTS["text_select"]), key="text_select")
+                text_normal = st.color_picker("Normal", key="text_normal")
+                text_select = st.color_picker("Hover", key="text_select")
         with c2:
             with st.container(border=True):
                 st.markdown("**Item background**")
-                item_bg_normal = st.text_input("Normal", st.session_state.get("item_bg_normal", DEFAULTS["item_bg_normal"]),
+                item_bg_normal = st.text_input("Normal",
                     help="Hex color or 'none'", key="item_bg_normal")
-                item_bg_select = st.text_input("Hover", st.session_state.get("item_bg_select", DEFAULTS["item_bg_select"]),
+                item_bg_select = st.text_input("Hover",
                     help="e.g. #ffffff20", key="item_bg_select")
-                item_radius = st.slider("Corner radius", 0, 3, st.session_state.get("item_radius", DEFAULTS["item_radius"]), key="item_radius")
+                item_radius = st.slider("Corner radius", 0, 3, key="item_radius")
 
     with sub_icon:
         c1, c2 = st.columns(2)
         with c1:
             with st.container(border=True):
                 st.markdown("**Colors**")
-                img_c1 = st.color_picker("Color 1 (main)", st.session_state.get("img_c1", DEFAULTS["img_c1"]), key="img_c1")
-                img_c2 = st.color_picker("Color 2", st.session_state.get("img_c2", DEFAULTS["img_c2"]), key="img_c2")
-                img_c3 = st.color_picker("Color 3", st.session_state.get("img_c3", DEFAULTS["img_c3"]), key="img_c3")
+                img_c1 = st.color_picker("Color 1 (main)", key="img_c1")
+                img_c2 = st.color_picker("Color 2", key="img_c2")
+                img_c3 = st.color_picker("Color 3", key="img_c3")
         with c2:
             with st.container(border=True):
                 st.markdown("**Display**")
                 img_align = st.selectbox("Alignment", [0, 1, 2],
-                    index=[0, 1, 2].index(st.session_state.get("img_align", DEFAULTS["img_align"])),
                     format_func=lambda x: {0: "Check mark only", 1: "Image only", 2: "Both"}[x],
                     key="img_align")
                 swatches = f'<div style="display:flex;gap:10px;padding:8px;background:#1a1a2e88;border-radius:6px">'
@@ -661,40 +797,39 @@ with main_tab_theme:
         c1, c2 = st.columns(2)
         with c1:
             with st.container(border=True):
-                border_enabled = st.toggle("Enable", st.session_state.get("border_enabled", DEFAULTS["border_enabled"]), key="border_enabled")
-                border_size = st.slider("Size", 0, 10, st.session_state.get("border_size", DEFAULTS["border_size"]), key="border_size")
-                border_color = st.color_picker("Color", st.session_state.get("border_color", DEFAULTS["border_color"]), key="border_color")
+                border_enabled = st.toggle("Enable", key="border_enabled")
+                border_size = st.slider("Size", 0, 10, key="border_size")
+                border_color = st.color_picker("Color", key="border_color")
         with c2:
             with st.container(border=True):
-                border_opacity = st.slider("Opacity", 0, 100, st.session_state.get("border_opacity", DEFAULTS["border_opacity"]), key="border_opacity")
-                border_radius = st.slider("Radius", 0, 20, st.session_state.get("border_radius", DEFAULTS["border_radius"]), key="border_radius")
+                border_opacity = st.slider("Opacity", 0, 100, key="border_opacity")
+                border_radius = st.slider("Radius", 0, 20, key="border_radius")
 
     with sub_shadow:
         c1, c2 = st.columns(2)
         with c1:
             with st.container(border=True):
-                shadow_enabled = st.toggle("Enable", st.session_state.get("shadow_enabled", DEFAULTS["shadow_enabled"]), key="shadow_enabled")
-                shadow_size = st.slider("Size", 0, 30, st.session_state.get("shadow_size", DEFAULTS["shadow_size"]), key="shadow_size")
-                shadow_color = st.color_picker("Color", st.session_state.get("shadow_color", DEFAULTS["shadow_color"]), key="shadow_color")
+                shadow_enabled = st.toggle("Enable", key="shadow_enabled")
+                shadow_size = st.slider("Size", 0, 30, key="shadow_size")
+                shadow_color = st.color_picker("Color", key="shadow_color")
         with c2:
             with st.container(border=True):
-                shadow_opacity = st.slider("Opacity", 0, 100, st.session_state.get("shadow_opacity", DEFAULTS["shadow_opacity"]), key="shadow_opacity")
-                shadow_offset = st.slider("Offset", 0, 30, st.session_state.get("shadow_offset", DEFAULTS["shadow_offset"]), key="shadow_offset")
+                shadow_opacity = st.slider("Opacity", 0, 100, key="shadow_opacity")
+                shadow_offset = st.slider("Offset", 0, 30, key="shadow_offset")
 
     with sub_font:
-        customize_font = st.checkbox("Customize font (disable to use system default — DPI-aware)", 
-            value=st.session_state.get("customize_font", DEFAULTS["customize_font"]), key="customize_font")
+        customize_font = st.checkbox("Customize font (disable to use system default — DPI-aware)", key="customize_font")
         if customize_font:
             c1, c2 = st.columns(2)
             with c1:
                 with st.container(border=True):
-                    font_name = st.text_input("Font", st.session_state.get("font_name", DEFAULTS["font_name"]),
+                    font_name = st.text_input("Font",
                         help="Must be installed on your system", key="font_name")
-                    font_size = st.slider("Size", 6, 24, st.session_state.get("font_size", DEFAULTS["font_size"]), key="font_size")
+                    font_size = st.slider("Size", 6, 24, key="font_size")
             with c2:
                 with st.container(border=True):
-                    font_weight = st.slider("Weight", 1, 9, st.session_state.get("font_weight", DEFAULTS["font_weight"]), key="font_weight")
-                    font_italic = st.toggle("Italic", False, key="font_italic")
+                    font_weight = st.slider("Weight", 1, 9, key="font_weight")
+                    font_italic = st.toggle("Italic", key="font_italic")
         else:
             st.caption("Using system default font with DPI scaling. Enable the checkbox above to customize.")
 
@@ -719,7 +854,7 @@ with main_tab_theme:
             else:
                 l.append(f'            radial=[{s.get("rcx", 100)}, {s.get("rcy", 100)}, {s.get("rr", 150)}, {s.get("rfx", 100)}, {s.get("rfy", 100)}]')
             l.append("            stop=[")
-            stops_list = s.get("stops", DEFAULTS["stops"])
+            stops_list = current_stops()
             for idx, s_top in enumerate(stops_list):
                 comma = "," if idx < len(stops_list) - 1 else ""
                 l.append(f"                [{s_top[0]}, {s_top[1]}]{comma}")
@@ -758,8 +893,8 @@ with main_tab_theme:
             l.append(f'        size={s.get("font_size", DEFAULTS["font_size"])}\n        weight={s.get("font_weight", DEFAULTS["font_weight"])}')
             if s.get("font_italic", False): l.append("        italic=1")
             l.append("    }")
-        l.append("\n}")
-        return "\n".join(l)
+        l.append("}")
+        return "\n".join(l) + "\n"
 
     st.divider()
     col_code, col_preview, col_btn = st.columns([2, 2, 1])
@@ -911,18 +1046,15 @@ with main_tab_theme:
             # Build gradient CSS
             grad_css = ""
             if gradient_enabled:
-                if grad_type == "linear":
-                    dx = lx2v - lx1v
-                    dy = ly2v - ly1v
-                    if dx == 0 and dy == 0: angle = "0deg"
-                    elif dx == 0: angle = "to bottom" if dy > 0 else "to top"
-                    elif dy == 0: angle = "to right" if dx > 0 else "to left"
-                    else: angle = f"{90 - (dy/dx) * 45 if dx != 0 else 0}deg"  # approximate
-                    stops_str = ", ".join(f"{s[1]} {int(s[0]*100)}%" for s in stops)
-                    grad_css = f"{angle}, {stops_str}"
+                ss = st.session_state
+                stops_str = ", ".join(f"{c} {int(o*100)}%" for o, c in stops)
+                if ss.grad_type == "linear":
+                    # NSS linear=[x1, x2, y1, y2]; CSS angles run clockwise from "to top".
+                    dx, dy = ss.lx2v - ss.lx1v, ss.ly2v - ss.ly1v
+                    angle = math.degrees(math.atan2(dx, -dy)) if (dx or dy) else 90
+                    grad_css = f"linear-gradient({angle:.0f}deg, {stops_str})"
                 else:
-                    stops_str = ", ".join(f"{s[1]} {int(s[0]*100)}%" for s in stops)
-                    grad_css = f"circle at {rcx}% {rcy}%, {stops_str}"
+                    grad_css = f"radial-gradient(circle at {ss.rcx}% {ss.rcy}%, {stops_str})"
 
             # Build shadow
             shadow_css = "none"
@@ -965,7 +1097,7 @@ with main_tab_theme:
                         hover_rad = item_rad if icon_idx[0] == 3 else "0"
                         html += f'<div style="padding:2px {8 + depth * 12}px 2px {4 + depth * 12}px;display:flex;align-items:center;gap:8px;background:{hover_bg};border-radius:{hover_rad};">\n'
                         html += f'  <span style="width:14px;height:14px;border-radius:2px;{icon_style};display:inline-block;flex-shrink:0;"></span>\n'
-                        html += f'  <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{node["title"]}</span>\n'
+                        html += f'  <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{escape(node["title"])}</span>\n'
                         html += '</div>\n'
                     elif node["type"] == "menu":
                         ci = icon_idx[0] % 3
@@ -973,7 +1105,7 @@ with main_tab_theme:
                         icon_style = f"background:linear-gradient(135deg, {icon_colors[ci]}, {icon_colors[(ci + 1) % 3]})"
                         html += f'<div style="padding:2px {8 + depth * 12}px 2px {4 + depth * 12}px;display:flex;align-items:center;gap:8px;">\n'
                         html += f'  <span style="width:14px;height:14px;border-radius:2px;{icon_style};display:inline-block;flex-shrink:0;"></span>\n'
-                        html += f'  <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">▶ {node["title"]}</span>\n'
+                        html += f'  <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">▶ {escape(node["title"])}</span>\n'
                         html += '</div>\n'
                         # Render children at increased depth
                         if node.get("children"):
@@ -982,7 +1114,7 @@ with main_tab_theme:
 
             tree_html = ""
             for root in menu_roots:
-                tree_html += f'<div style="padding:2px 12px 1px;font-size:10px;color:{hex_to_rgba(text_normal, 0.4)};text-transform:uppercase;letter-spacing:0.5px;">{root["source"]}</div>\n'
+                tree_html += f'<div style="padding:2px 12px 1px;font-size:10px;color:{hex_to_rgba(text_normal, 0.4)};text-transform:uppercase;letter-spacing:0.5px;">{escape(root["source"])}</div>\n'
                 tree_html += render_tree(root["children"])
                 tree_html += f'<div style="height:1px;background:{hex_to_rgba(text_normal, 0.08)};margin:2px 8px;"></div>\n'
 
@@ -1006,23 +1138,17 @@ with main_tab_theme:
                 '</div>'
             )
             st.markdown(preview_html, unsafe_allow_html=True)
-            item_count = sum(1 for r in menu_roots for c in r["children"] if c["type"] == "item")
             st.caption(f"Menu tree from {len(menu_roots)} source files. Third item highlighted as hover state.")
     with col_btn:
         with st.container(border=True):
             st.markdown("**💾 File**")
-            if st.button("📖 Read theme.nss", use_container_width=True):
-                if os.path.exists(THEME_PATH):
-                    with open(THEME_PATH, "r") as f:
-                        st.session_state.theme_content = f.read()
-                    st.success("Loaded")
-            if st.button("💾 Write to theme.nss", type="primary", use_container_width=True):
+            if st.button("💾 Write to theme.nss", type="primary", width="stretch"):
                 try:
                     backup_file(THEME_PATH)
                     with open(THEME_PATH, "w", encoding="utf-8") as f:
                         f.write(generate_theme())
                     st.toast("✅ Written! Reload Shell (Ctrl+Right-click → Update)", icon="✅")
-                except Exception as e:
+                except OSError as e:
                     st.error(f"Failed to write theme.nss: {e}")
             st.caption(f"`{THEME_PATH}`")
 
@@ -1045,22 +1171,19 @@ with main_tab_icons:
         names = [n.strip() for n in m.group(1).split(",") if n.strip()]
         icons.append({"names": names, "svg": svg})
 
-    # Color slot preview
-    c1, c2, c3 = st.columns(3)
-    with c1: slot1 = st.color_picker("Slot 1 (image.color1)", st.session_state.get("img_c1", DEFAULTS["img_c1"]), key="icon_slot1")
-    with c2: slot2 = st.color_picker("Slot 2 (image.color2)", st.session_state.get("img_c2", DEFAULTS["img_c2"]), key="icon_slot2")
-    with c3: slot3 = st.color_picker("Slot 3 (image.color3)", st.session_state.get("img_c3", DEFAULTS["img_c3"]), key="icon_slot3")
+    slot1, slot2, slot3 = (st.session_state.get(k, DEFAULTS[k]) for k in ("img_c1", "img_c2", "img_c3"))
+    st.caption("Icon colors come from 🎨 Theme → Icons (image.color1/2/3).")
+    # Single-line $variables (e.g. $clipPath, $svg_window_template) that icon bodies reference as @name
+    svg_vars = dict(re.findall(r"(?m)^\$(\w+)\s*=\s*'([^']*)'", content))
 
     def render_svg(svg_text, s1, s2, s3):
-        """Substitute color slots and render SVG."""
-        r = svg_text.replace("@image.color1", s1).replace("@image.color2", s2).replace("@image.color3", s3)
+        """Substitute variables and color slots so the SVG renders in the browser."""
+        r = re.sub(r"@(\w+)\b(?!\.)", lambda m: svg_vars.get(m.group(1), m.group(0)), svg_text)
+        r = r.replace("@image.color1", s1).replace("@image.color2", s2).replace("@image.color3", s3)
         r = r.replace("@color3", s3).replace("@color_islight_WB", "#ffffff")
-        clip = '<defs><clipPath id="clip0"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs>'
-        r = r.replace("@clipPath", clip)
-        r = re.sub(r"@if\([^)]+\)", "#ffffff", r)
         extras = 'width="24" height="24" xmlns="http://www.w3.org/2000/svg"'
         r = re.sub(r'<svg\s+', f'<svg {extras} ', r, count=1)
-        return r
+        return " ".join(r.split())
 
     search_icon = st.text_input("🔍 Filter icons by name", "", key="icon_search")
 
@@ -1073,10 +1196,8 @@ with main_tab_icons:
             svg_html = render_svg(ic["svg"], slot1, slot2, slot3)
             icon_name = ic["names"][0]
             preview_div = f'<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#2a2a3e;border-radius:6px;border:1px solid #444;">{svg_html}</div>'
-            st.markdown(f'<div style="text-align:center;padding:8px 0">{preview_div}<div style="font-size:11px;color:#aaa;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{icon_name}</div></div>', unsafe_allow_html=True)
-            if st.button("📋 Copy name", key=f"copy_icon_{idx}", use_container_width=True):
-                st.toast(f"Copied: {icon_name}")
-                st.session_state["copied_icon"] = icon_name
+            st.markdown(f'<div style="display:flex;justify-content:center;padding:8px 0 4px">{preview_div}</div>', unsafe_allow_html=True)
+            st.code(icon_name, language=None)
 
 with main_tab_find:
     st.markdown("## 🔍 Find & Replace")
@@ -1123,7 +1244,7 @@ with main_tab_find:
                         before = display[:m.start()] if start == 0 else "..." + display[start:m.start()]
                         matched = display[m.start():m.end()]
                         after = display[m.end():m.end() + 60]
-                        st.markdown(f'{before}**{matched}**{after}', unsafe_allow_html=True)
+                        st.html(f'<code>{escape(before)}<mark>{escape(matched)}</mark>{escape(after)}</code>')
 
             if not results:
                 st.info("No matches found.")
@@ -1132,7 +1253,7 @@ with main_tab_find:
             st.divider()
             st.markdown("### Replace")
             st.warning(f"This will replace **{find_term}** → **{replace_term}** in {len(set(r['file'] for r in results))} file(s). Backups will be created.")
-            if st.button("🔄 Replace All", type="primary", use_container_width=True):
+            if st.button("🔄 Replace All", type="primary", width="stretch"):
                 count = 0
                 fails = 0
                 flags = 0 if case_sensitive else re.IGNORECASE
@@ -1140,13 +1261,13 @@ with main_tab_find:
                     if not os.path.exists(fp): continue
                     try:
                         content = read_file_safe(fp)
-                        new_content = re.sub(re.escape(find_term), replace_term, content, flags=flags)
+                        new_content = re.sub(re.escape(find_term), lambda _: replace_term, content, flags=flags)
                         if new_content != content:
                             backup_file(fp)
                             with open(fp, "w", encoding="utf-8") as f:
                                 f.write(new_content)
                             count += 1
-                    except Exception as e:
+                    except OSError as e:
                         fails += 1
                         st.error(f"Failed to replace in {fp}: {e}")
                 if count:
@@ -1160,8 +1281,6 @@ with main_tab_export:
     st.markdown("## 📦 Export / Import Config")
     st.caption("Save your entire setup as a single file, or reload it later.")
 
-    import json, base64, io, zipfile
-
     tab_export, tab_import = st.tabs(["📤 Export", "📥 Import"])
 
     with tab_export:
@@ -1172,7 +1291,7 @@ with main_tab_export:
                 include_backups = st.checkbox("Include backups/ folder", value=False, key="export_backups")
                 include_state = st.checkbox("Include theme state (colors, fonts)", value=True, key="export_state")
 
-        if st.button("📦 Generate Export", type="primary", use_container_width=True):
+        if st.button("📦 Generate Export", type="primary", width="stretch"):
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
                 base = _SCRIPT_DIR
@@ -1187,9 +1306,10 @@ with main_tab_export:
                         if fn.endswith(".nss") or fn in ("AGENTS.md", "SKILL.md"):
                             zf.write(fp, rel)
                 if include_state:
-                    state = {k: st.session_state[k] for k in st.session_state if not k.startswith("_") and not k.startswith("ci_") and not k.startswith("mt") and not k.startswith("mwt") and not k.startswith("mm") and not k.startswith("mp") and not k.startswith("ms") and not k.startswith("ma") and "editor_" not in k and "area_" not in k and "icon_" not in k and k not in ("preset_selector", "hist_file", "find_term", "replace_term", "find_case", "shell_install_dir")}
+                    state = {k: st.session_state.get(k, DEFAULTS[k]) for k in DEFAULTS if k != "stops"}
+                    state["stops"] = current_stops()
                     zf.writestr("_state.json", json.dumps(state, indent=2))
-            st.download_button("💾 Download export.zip", data=buf.getvalue(), file_name="nileshell-config.zip", mime="application/zip", use_container_width=True)
+            st.download_button("💾 Download export.zip", data=buf.getvalue(), file_name="nileshell-config.zip", mime="application/zip", width="stretch")
             st.caption("The export includes all `.nss` files, AGENTS.md, SKILL.md, and optionally backups + theme state.")
 
     with tab_import:
@@ -1198,29 +1318,30 @@ with main_tab_export:
             st.warning("⚠️ This will overwrite your current `.nss` files. Backups will be created first.")
             col_a, col_b = st.columns(2)
             with col_a:
-                if st.button("📥 Import & Overwrite", type="primary", use_container_width=True):
+                if st.button("📥 Import & Overwrite", type="primary", width="stretch"):
                     try:
                         buf = io.BytesIO(uploaded.read())
+                        written = []
                         with zipfile.ZipFile(buf, "r") as zf:
                             for name in zf.namelist():
                                 if name == "_state.json":
                                     state_data = json.loads(zf.read(name))
-                                    for k, v in state_data.items():
-                                        st.session_state[k] = v
+                                    st.session_state._pending_state = {k: v for k, v in state_data.items() if k in DEFAULTS}
                                     continue
-                                if name.startswith("backups"): continue
-                                dest = os.path.join(_SCRIPT_DIR, name)
-                                parent = os.path.dirname(dest)
-                                if parent: os.makedirs(parent, exist_ok=True)
-                                if os.path.exists(dest): backup_file(dest)
+                                # Only restore .nss files at the root or in imports/, never paths outside the project.
+                                if not re.fullmatch(r"(imports/)?[\w.-]+\.nss", name): continue
+                                dest = os.path.join(_SCRIPT_DIR, *name.split("/"))
+                                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                                backup_file(dest)
                                 with open(dest, "wb") as f:
                                     f.write(zf.read(name))
-                        st.success("✅ Imported! Reload Shell to see changes.")
+                                written.append(name)
+                        st.toast(f"✅ Imported {len(written)} file(s). Reload Shell to see changes.")
                         st.rerun()
-                    except Exception as e:
+                    except (OSError, zipfile.BadZipFile, json.JSONDecodeError) as e:
                         st.error(f"Import failed: {e}")
             with col_b:
-                if st.button("🚫 Cancel", use_container_width=True):
+                if st.button("🚫 Cancel", width="stretch"):
                     st.rerun()
 
 with main_tab_history:
@@ -1263,12 +1384,9 @@ with main_tab_history:
                     if st.button(f"↩ Restore this version", key=f"restore_{ts}"):
                         try:
                             backup_file(filepath)
-                            with open(bak_path, "r") as src:
-                                with open(filepath, "w", encoding="utf-8") as dst:
-                                    dst.write(src.read())
-                            st.success(f"Restored version from {label}!")
+                            shutil.copy2(bak_path, filepath)
                             st.rerun()
-                        except Exception as e:
+                        except OSError as e:
                             st.error(f"Restore failed: {e}")
 
     st.divider()
@@ -1296,7 +1414,7 @@ with main_tab_help:
         - `imports/theme.nss` — visual theme (menu background, colors, gradient, font, border, shadow)
         - `imports/modify.nss` — modify rules: hide, move, reposition existing system items
         - `imports/custom.nss` — your custom items (appended by the Menu Items tab; auto-created)
-        - `imports/images.nss` — ~100 SVG icon definitions used via `image=@name` syntax
+        - `imports/images.nss` — ~100 SVG image definitions (browse them in 🖼️ Icons)
         - `imports/terminal.nss` — terminal/command prompt entries
         - `imports/file-manage.nss` — file operations (copy path, attributes, ownership, etc.)
         - `imports/develop.nss` — dev tools (VS Code, dotnet, etc.)
@@ -1310,7 +1428,7 @@ with main_tab_help:
         - **Title** — the label shown in the context menu (default: `My App`)
         - **Command** — executable name or full path (e.g. `notepad.exe`, `code`, `cmd.exe`)
         - **Arguments** — extra args; use `@sel.path` for the selected file/folder path
-        - **Icon** — use `icon.name` (built-in Shell icons), a path to `.exe`/`.dll`, or `@svg_name` for an icon from `images.nss`
+        - **Icon** — use `icon.name` (built-in Shell icons), a glyph like `\\uE10A`, or a path to an `.exe`/`.dll`/image
         - **Where condition** — NSS expression controlling visibility. Examples: `sel.count>0`, `sel.type=='file'`, `window.is_desktop`
         - **Type filter** — one of `'file'`, `'dir'`, `'drive'`, `'*'` (blank = all). Wraps the item: `item(type='file' ...)`
         - **Run as admin** — adds the `admin` flag to the item definition
@@ -1324,9 +1442,9 @@ with main_tab_help:
         - **Custom pattern** — override with `find="text*"` (match by name) or `this.id==id.xxx` (match by ID)
         - **Type filter** — `'file'`, `'dir'`, `'dir.back|drive.back'`, blank = all. Prepended as `type=...` in the `modify()` call
         - **Target menu** — name of your custom menu to move items into (default: `file manage`)
-        - **Position** — `top`, `bottom`, `1` (numeric), `last`, or blank (unchanged)
+        - **Position** — `top`, `middle`, `bottom`, a number, or blank (unchanged)
         - **Separator** — `top`, `bottom`, or `both` around the item in its new position
-        - When no target is selected, a comment is shown in preview. The append button still writes it as `// ...`
+        - The append button is disabled until a target ID or custom pattern is set
         - Appends to `imports/modify.nss` — must be imported by `shell.nss`
         """)
     with st.expander("⚙️ Settings guide"):
@@ -1352,14 +1470,10 @@ with main_tab_help:
         """)
     with st.expander("🖼️ Icon Browser guide"):
         st.markdown("""
-        - Browse all SVG icons defined in `imports/images.nss` — parsed from `@name` declarations
-        - **3 color slot pickers** at the top let you preview how different colors affect each SVG
-        - **Slot 1** → `@image.color1` — primary fill color in most icons
-        - **Slot 2** → `@image.color2` — secondary accent color
-        - **Slot 3** → `@image.color3` / `@color3` — background/tertiary color
-        - Click **📋 Copy name** to store the icon name in app state (e.g. `copy_path`)
-        - Reference SVGs in items with `image=@name` (e.g. `image=@copy_path`)
-        - Built-in Shell icons use the `icon.name` notation (e.g. `image=icon.pin`) — these are separate
+        - Browse all SVG images defined in `imports/images.nss` — parsed from `@name='<svg>...'` declarations
+        - Colors come from **🎨 Theme → Icons**: `@image.color1` (main), `@image.color2` (accent), `@image.color3` / `@color3` (tertiary)
+        - Each icon shows its first name with a copy button
+        - Built-in Shell icons use the `icon.name` notation (e.g. `image=icon.pin`)
         - Use the **search box** to filter icons by name
         """)
     with st.expander("🔍 Find & Replace guide"):
@@ -1367,7 +1481,7 @@ with main_tab_help:
         - **Search** across `shell.nss` and all `.nss` files in `imports/`
         - Results show **file name**, **line number**, and a **bold-highlighted match** with surrounding context
         - Toggle **Aa** for case-sensitive matching (default: case-insensitive)
-        - **Replace All** only shows when results exist — creates `.bak` backups via the History system
+        - **Replace All** only shows when results exist — backs up each changed file first (see 📜 History)
         - Per-file error handling: failures in one file don't stop replacements in others
         - Each matching line is shown with ~60 chars context before/after the match
         - Always verify replacements in the **📜 History** tab afterward
@@ -1376,10 +1490,10 @@ with main_tab_help:
         st.markdown("""
         - **Export** bundles all `.nss` files + `AGENTS.md` + `SKILL.md` into a single ZIP
         - Optionally include **backups/** folder and **theme state** (theme colors, font, gradient, border, shadow settings — not editor content or search state)
-        - **Import** restores a previously exported ZIP — creates `.bak` backups for every overwritten file
+        - **Import** restores `.nss` files (project root and `imports/` only) and theme state from a previously exported ZIP — every overwritten file is backed up first
         - The app's own code (`theme-tweaker.py`) is **never** included in exports
         - Junk directories (`.streamlit`, `__pycache__`, `.venv`, `.git`, `node_modules`) are automatically excluded
-        - Theme state excludes: editor content, search terms, icon color pickers, and transient UI keys
+        - Theme state contains only theme editor values (colors, gradient, border, shadow, font)
         """)
     with st.expander("✅ Syntax Checker guide"):
         st.markdown("""
@@ -1388,31 +1502,28 @@ with main_tab_help:
         - Reports:
           - **Line-level errors**: extra `}` or `)` on each line (resets depth to 0)
           - **File-level errors**: unclosed braces/parens remaining at EOF
-        - Lines starting with `//` or `#` are skipped entirely
+        - `//` and `/* */` comments are skipped
         - Content inside single-quoted `'...'` and double-quoted `"..."` strings is ignored
         - Does **not** check: NSS keyword validity, variable references, image names, or type correctness
         - For detailed runtime errors, check `shell.log` in your Shell installation folder
         """)
     with st.expander("📋 Item Library guide"):
         st.markdown("""
-        - Pre-built templates for common context menu actions
-        - Click any template button → code is stored in app state (visible as a toast)
-        - The code then appears in the **preview** area above — append it like any item
-        - Templates cover: VS Code, Terminal, Notepad, Take Ownership, Copy Path, and more
-        - Edit the pasted code (title, icon, command) before appending to `custom.nss`
+        - Pre-built snippets for common context menu actions (VS Code, Terminal, Notepad, Take Ownership, Copy Path, and more)
+        - Use the copy icon on a snippet, then paste it into `custom.nss` via the **📂 Imports** editor
+        - Edit the title, icon, or command to taste before saving
         """)
     with st.expander("🎨 Theme tips"):
         st.markdown("""
-        - **Effect 2 (Blur with acrylic)** + gradient = best look on modern Windows, but GPU-dependent
-        - **Effect 0 (Solid)** = fastest, no transparency, most compatible
+        - **Effect 2 (Blur)** or **3 (Acrylic)** + gradient = best look on modern Windows, but GPU-dependent
+        - **Effect 0 (Disable)** = no transparency effect, most compatible
         - **Effect 1 (Transparent)** = simple transparency without blur
+        - The editor starts from `imports/theme.nss`; **📖 Reload theme.nss** discards unsaved edits, **Pick a preset** applies colors only
         - If text is unreadable on your gradient, toggle between **black** and **white** text colors
         - Use **presets** as a starting point, then tweak individual sliders
         - The **gradient preview bar** shows exactly how your colors will blend
         - The **live preview pane** renders a simplified mockup of your menu tree with the current theme values
-        - `color=auto` uses Windows accent color, but the picker still sets the value in theme.nss
-        - Border, shadow, and font settings only affect top-level menus, not submenus, per Nilesoft Shell limitations
-        - **Write to theme.nss** replaces the entire file with your current settings
+        - **Write to theme.nss** replaces the entire file with your current settings (a backup is saved first)
         """)
     with st.expander("🤖 LLM Instructions (copy-paste for AI assistants)"):
         st.markdown("""

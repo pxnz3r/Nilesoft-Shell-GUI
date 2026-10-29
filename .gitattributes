@@ -1,2 +1,5 @@
 # Batch files must keep CRLF or cmd.exe can misparse them
 *.bat text eol=crlf
+
+# .nss here is Nilesoft Shell config, not NWScript; GitHub Linguist has no language for it
+*.nss linguist-detectable=false

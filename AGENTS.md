@@ -18,7 +18,8 @@ A **Streamlit** GUI (`theme-tweaker.py`) for editing [Nilesoft Shell](https://ni
 ├── CLAUDE.md                Points Claude Code at this file
 ├── SKILL.md                 NSS syntax reference for assistants
 ├── README.md                Setup and feature overview
-├── assets/hero-banner.svg   Animated README banner (pure SVG + CSS)
+├── assets/hero-banner.svg   Animated README banner (pure SVG + CSS). README links it by commit hash
+│                            to dodge GitHub's image cache: after changing it, commit, then update the hash.
 ├── imports/
 │   ├── theme.nss            Visual theme (colors, gradient, font, border, shadow)
 │   ├── modify.nss           Hide/move/reorder system menu items

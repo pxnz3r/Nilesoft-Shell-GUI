@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/pxnz3r/Nilesoft-Shell-GUI/e0b9fce/assets/hero-banner.svg" alt="Nilesoft Shell GUI" width="600">
+  <img src="assets/hero-banner.svg" alt="Nilesoft Shell GUI" width="800">
   <br><br>
   <p>A visual editor for <a href="https://github.com/moudey/shell">Nilesoft Shell</a> context menu configuration - no manual <code>.nss</code> editing required.</p>
   <p>
@@ -14,23 +14,23 @@
 
 **1. Install Nilesoft Shell**
 
-Download the [latest release](https://github.com/moudey/shell/releases), extract, and register:
-```
-shell.exe /reg
+Use the installer from the [latest release](https://github.com/moudey/shell/releases), or `winget install nilesoft.shell`. For the portable zip, register it from an admin terminal:
+```bat
+shell.exe -register -restart
 ```
 
 **2. Clone and install dependencies**
 ```bat
 git clone https://github.com/pxnz3r/Nilesoft-Shell-GUI
 cd Nilesoft-Shell-GUI
-pip install streamlit
+pip install -r requirements.txt
 ```
 
 **3. Run the GUI**
 ```bat
 streamlit run theme-tweaker.py
 ```
-Opens at `http://localhost:8501`.
+Or double-click `start.bat`. Opens at `http://localhost:8501`. The Theme tab starts from your current `imports/theme.nss`.
 
 ## Linking Config to Shell
 
@@ -52,19 +52,21 @@ After any change: **Ctrl + right-click** desktop &rarr; **Shell &rarr; Update ch
 
 | Tab | Purpose |
 |-----|---------|
-| Theme | Colors, 4-stop gradients, effects, border, shadow, font - 9 presets |
-| Menu Items | Build custom entries (title, command, args, icon, conditions) |
+| Menu Items | Build custom entries (title, command, args, icon, conditions) plus a snippet library |
 | Modify | Hide, reorder, or move built-in system menu items |
-| Settings | Priority, delay, tooltips, exclude condition |
-| Imports | Inline editor for any `.nss` file with syntax validation |
-| Icon Browser | Preview all built-in SVG icons with live color slots |
+| Settings | Priority, delay, tooltips, exclude condition, `shell.log` viewer |
+| Imports | Toggle imports, inline editor for any `.nss` file, syntax checker |
+| Theme | Colors, gradients (up to 6 stops), effects, border, shadow, font, 10 presets, live preview |
+| Icons | Preview every SVG in `images.nss` in your theme's icon colors |
+| Find | Search and replace across all `.nss` files |
+| Export | Package your config as `.zip` with optional theme state, and restore it |
 | History | Auto-timestamped backups with one-click restore |
-| Export/Import | Package your config as `.zip` with optional theme state |
 
 ## Structure
 
 ```
 ├── theme-tweaker.py         Streamlit GUI
+├── requirements.txt         Python dependencies
 ├── start.bat                Launcher
 ├── shell.nss                Main entry point (imports all modules)
 ├── imports/
@@ -79,7 +81,8 @@ After any change: **Ctrl + right-click** desktop &rarr; **Shell &rarr; Update ch
 │   └── taskbar.nss          Taskbar-specific items
 ├── Docs/                    Nilesoft Shell reference documentation
 ├── AGENTS.md                AI assistant context
-└── SKILL.md                 LLM skill instructions
+├── CLAUDE.md                Claude Code entry (imports AGENTS.md)
+└── SKILL.md                 NSS syntax reference for assistants
 ```
 
 ## Documentation
@@ -88,7 +91,9 @@ Full Nilesoft Shell reference in the `Docs/` folder or at [nilesoft.org/docs](ht
 
 ## License
 
-This GUI is MIT licensed. Nilesoft Shell is [MIT](LICENSE) by [moudey](https://github.com/moudey/shell).
+This GUI is [MIT](LICENSE) licensed. Nilesoft Shell and the default `.nss` configs it ships are MIT by [moudey](https://github.com/moudey/shell).
+
+Contributions welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Release notes are in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 

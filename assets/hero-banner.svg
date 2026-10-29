@@ -1,28 +1,319 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 430" width="1200" height="430" role="img" aria-label="Nilesoft Shell GUI: pick a theme preset and the Windows context menu restyles live">
+  <title>Nilesoft Shell GUI</title>
+  <style>
+    text { font-family: "Segoe UI Variable Display", "Segoe UI", Inter, system-ui, -apple-system, sans-serif; }
+    .mono { font-family: "Cascadia Code", Consolas, ui-monospace, Menlo, monospace; }
+    .ease { animation-timing-function: cubic-bezier(.65, 0, .35, 1); }
+
+    /* Ambient background */
+    .blob { animation: drift 18s ease-in-out infinite alternate; }
+    .blob.b2 { animation-duration: 23s; animation-direction: alternate-reverse; }
+    .blob.b3 { animation-duration: 27s; }
+    @keyframes drift { from { transform: translate(-40px, -10px); } to { transform: translate(60px, 25px); } }
+    .flow-track { animation: dash 1.6s linear infinite; }
+    @keyframes dash { to { stroke-dashoffset: -20; } }
+    .underline { transform-box: fill-box; transform-origin: center; animation: pulse 4s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { transform: scaleX(.55); opacity: .7; } 50% { transform: scaleX(1); opacity: 1; } }
+
+    /* 16s story: right-click opens the menu, then three preset clicks restyle it */
+    .cursor { opacity: 0; animation: cursor 16s cubic-bezier(.65, 0, .35, 1) infinite both; }
+    @keyframes cursor {
+      0%   { transform: translate(1160px, 440px); opacity: 0; }
+      3%   { opacity: 1; }
+      8%, 10% { transform: translate(742px, 150px); }
+      22%, 30% { transform: translate(182px, 248px); }
+      46%, 55% { transform: translate(218px, 248px); }
+      71%, 82% { transform: translate(254px, 248px); }
+      91%  { transform: translate(70px, 440px); opacity: 1; }
+      93%, 100% { transform: translate(70px, 440px); opacity: 0; }
+    }
+    .press { transform-box: fill-box; transform-origin: 0 0; animation: press 16s linear infinite both; }
+    @keyframes press {
+      0%, 8.6%, 10%, 24.4%, 26%, 49.4%, 51%, 74.4%, 76%, 100% { transform: scale(1); }
+      9.2%, 25%, 50%, 75% { transform: scale(.8); }
+    }
+    .ripple { transform-box: fill-box; transform-origin: center; opacity: 0; animation: 16s ease-out infinite both; }
+    .r0 { animation-name: r0; } .r1 { animation-name: r1; } .r2 { animation-name: r2; } .r3 { animation-name: r3; }
+    @keyframes r0 { 0%, 9% { opacity: 0; transform: scale(.2); } 9.3% { opacity: .9; } 13%, 100% { opacity: 0; transform: scale(1.6); } }
+    @keyframes r1 { 0%, 25% { opacity: 0; transform: scale(.2); } 25.3% { opacity: .9; } 29%, 100% { opacity: 0; transform: scale(1.6); } }
+    @keyframes r2 { 0%, 50% { opacity: 0; transform: scale(.2); } 50.3% { opacity: .9; } 54%, 100% { opacity: 0; transform: scale(1.6); } }
+    @keyframes r3 { 0%, 75% { opacity: 0; transform: scale(.2); } 75.3% { opacity: .9; } 79%, 100% { opacity: 0; transform: scale(1.6); } }
+
+    /* Context menu */
+    .menu { transform-box: fill-box; transform-origin: 0 0; animation: menu 16s cubic-bezier(.2, .8, .2, 1) infinite both; }
+    @keyframes menu {
+      0%, 9% { opacity: 0; transform: scale(.88); }
+      12.5%, 93% { opacity: 1; transform: scale(1); }
+      96.5%, 100% { opacity: 0; transform: scale(.96); }
+    }
+    .row { animation: row 16s cubic-bezier(.2, .8, .2, 1) infinite both; }
+    @keyframes row {
+      0%, 9.5% { opacity: 0; transform: translateX(-10px); }
+      13.5%, 93% { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+    .hover { animation: hover 16s cubic-bezier(.65, 0, .35, 1) infinite both; }
+    @keyframes hover {
+      0%, 14% { transform: translateY(9px); }
+      20%, 26% { transform: translateY(39px); }
+      32%, 38% { transform: translateY(69px); }
+      44%, 50% { transform: translateY(99px); }
+      57%, 63% { transform: translateY(129px); }
+      69%, 75% { transform: translateY(171px); }
+      81%, 100% { transform: translateY(201px); }
+    }
+    .sweep { animation: sweep 16s linear infinite both; }
+    @keyframes sweep {
+      0%, 30% { transform: translateX(-160px) skewX(-20deg); }
+      34% { transform: translateX(420px) skewX(-20deg); }
+      34.1%, 55% { transform: translateX(-160px) skewX(-20deg); }
+      59% { transform: translateX(420px) skewX(-20deg); }
+      59.1%, 80% { transform: translateX(-160px) skewX(-20deg); }
+      84% { transform: translateX(420px) skewX(-20deg); }
+      84.1%, 100% { transform: translateX(-160px) skewX(-20deg); }
+    }
+
+    /* Theme layers: B, C, D stack over A as each preset lands, reset while the menu is closed */
+    .tB, .tC, .tD { opacity: 0; animation: 16s ease-in-out infinite both; }
+    .tB { animation-name: tB; } .tC { animation-name: tC; } .tD { animation-name: tD; }
+    @keyframes tB { 0%, 29.5% { opacity: 0; } 32%, 96.5% { opacity: 1; } 97.5%, 100% { opacity: 0; } }
+    @keyframes tC { 0%, 54.5% { opacity: 0; } 57%, 96.5% { opacity: 1; } 97.5%, 100% { opacity: 0; } }
+    @keyframes tD { 0%, 79.5% { opacity: 0; } 82%, 96.5% { opacity: 1; } 97.5%, 100% { opacity: 0; } }
+    /* GUI labels switch the moment a swatch is clicked */
+    .gA, .gB, .gC, .gD { opacity: 0; animation: 16s ease-in-out infinite both; }
+    .gA { opacity: 1; animation-name: gA; } .gB { animation-name: gB; } .gC { animation-name: gC; } .gD { animation-name: gD; }
+    @keyframes gA { 0%, 25% { opacity: 1; } 26%, 97% { opacity: 0; } 98.5%, 100% { opacity: 1; } }
+    @keyframes gB { 0%, 25% { opacity: 0; } 26%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    @keyframes gC { 0%, 50% { opacity: 0; } 51%, 75% { opacity: 1; } 76%, 100% { opacity: 0; } }
+    @keyframes gD { 0%, 75% { opacity: 0; } 76%, 97% { opacity: 1; } 98.5%, 100% { opacity: 0; } }
+    .ring { animation: ring 16s cubic-bezier(.34, 1.56, .64, 1) infinite both; }
+    @keyframes ring {
+      0%, 25% { transform: translateX(0); } 27%, 50% { transform: translateX(36px); }
+      52%, 75% { transform: translateX(72px); } 77%, 97% { transform: translateX(108px); }
+      99%, 100% { transform: translateX(0); }
+    }
+    .knob { animation: knob 16s cubic-bezier(.65, 0, .35, 1) infinite both; }
+    @keyframes knob {
+      0%, 25% { transform: translateX(146px); } 29%, 50% { transform: translateX(96px); }
+      54%, 75% { transform: translateX(186px); } 79%, 97% { transform: translateX(126px); }
+      100% { transform: translateX(146px); }
+    }
+    .fill { transform-box: fill-box; transform-origin: 0 0; animation: fill 16s cubic-bezier(.65, 0, .35, 1) infinite both; }
+    @keyframes fill {
+      0%, 25% { transform: scaleX(.646); } 29%, 50% { transform: scaleX(.425); }
+      54%, 75% { transform: scaleX(.823); } 79%, 97% { transform: scaleX(.558); }
+      100% { transform: scaleX(.646); }
+    }
+    .saved { opacity: 0; animation: saved 16s ease-in-out infinite both; }
+    @keyframes saved {
+      0%, 25.5% { opacity: 0; } 27%, 35% { opacity: 1; } 37%, 50.5% { opacity: 0; } 52%, 60% { opacity: 1; }
+      62%, 75.5% { opacity: 0; } 77%, 85% { opacity: 1; } 87%, 100% { opacity: 0; }
+    }
+    .pill { opacity: 0; animation: pill 16s linear infinite both; }
+    @keyframes pill {
+      0%, 25% { opacity: 0; } 26%, 29% { opacity: 1; } 30%, 50% { opacity: 0; } 51%, 54% { opacity: 1; }
+      55%, 75% { opacity: 0; } 76%, 79% { opacity: 1; } 80%, 100% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; }
+      .menu, .row { opacity: 1; }
+      .knob { transform: translateX(146px); }
+      .fill { transform: scaleX(.646); }
+    }
+  </style>
+
   <defs>
-    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff12"/>
-      <stop offset="100%" stop-color="#ffffff06"/>
+    <filter id="blur-xl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="70"/></filter>
+    <filter id="blur-lg" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="38"/></filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="12" cy="12" r="1" fill="#fff"/>
+    </pattern>
+    <radialGradient id="fade" cx="50%" cy="45%" r="60%">
+      <stop offset="0" stop-color="#fff" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="dot-mask"><rect width="1200" height="430" fill="url(#fade)"/></mask>
+
+    <linearGradient id="title" x1="300" y1="0" x2="900" y2="0" gradientUnits="userSpaceOnUse" spreadMethod="reflect">
+      <stop offset="0" stop-color="#d9d9e6"/>
+      <stop offset=".42" stop-color="#d9d9e6"/>
+      <stop offset=".5" stop-color="#ffffff"/>
+      <stop offset=".58" stop-color="#ffc2cb"/>
+      <stop offset=".66" stop-color="#d9d9e6"/>
+      <stop offset="1" stop-color="#d9d9e6"/>
+      <animateTransform attributeName="gradientTransform" type="translate" from="-700 0" to="700 0" dur="5s" repeatCount="indefinite"/>
     </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1">
+      <stop offset="0" stop-color="#ff4b5c"/>
+      <stop offset=".5" stop-color="#8a5cff"/>
+      <stop offset="1" stop-color="#3fa2ff"/>
+    </linearGradient>
+
+    <!-- Theme presets: A Crimson Navy, B Light Blue, C Forest, D Amber Glow -->
+    <linearGradient id="mA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a0505"/><stop offset=".35" stop-color="#8f1322"/><stop offset=".7" stop-color="#3a2a6b"/><stop offset="1" stop-color="#0a0a2e"/>
+    </linearGradient>
+    <linearGradient id="mB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a1a2a"/><stop offset=".35" stop-color="#1f5f99"/><stop offset=".7" stop-color="#3a7ab5"/><stop offset="1" stop-color="#0c2340"/>
+    </linearGradient>
+    <linearGradient id="mC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#050a05"/><stop offset=".35" stop-color="#0d3a1a"/><stop offset=".7" stop-color="#1a6a3a"/><stop offset="1" stop-color="#0a2a14"/>
+    </linearGradient>
+    <linearGradient id="mD" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0500"/><stop offset=".35" stop-color="#5a2a00"/><stop offset=".7" stop-color="#a65a0a"/><stop offset="1" stop-color="#2a1500"/>
+    </linearGradient>
+    <linearGradient id="sweepGrad" x1="0" x2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="menuClip"><rect width="280" height="238" rx="10"/></clipPath>
+    <path id="flow" d="M512 292 C 610 292 640 262 738 262"/>
   </defs>
-  <rect width="800" height="200" rx="12" fill="#080808"/>
-  <g>
-    <animateTransform attributeName="transform" type="translate" values="0,0; 0,-8; 0,0; 0,8; 0,0" dur="6s" repeatCount="indefinite"/>
-    <g transform="translate(60, 38)">
-      <rect x="0" y="0" width="180" height="124" rx="10" fill="url(#glass)" stroke="#ffffff20" stroke-width="0.8"/>
-      <rect x="0" y="0" width="180" height="124" rx="10" fill="#ffffff04"/>
-      <rect x="14" y="14" width="90" height="6" rx="3" fill="#ffffff25"/>
-      <rect x="14" y="28" width="70" height="5" rx="2.5" fill="#ffffff12"/>
-      <rect x="14" y="40" width="80" height="5" rx="2.5" fill="#ffffff12"/>
-      <rect x="14" y="52" width="60" height="5" rx="2.5" fill="#ffffff12"/>
-      <rect x="14" y="62" width="152" height="0.5" fill="#ffffff10"/>
-      <rect x="14" y="72" width="75" height="5" rx="2.5" fill="#ffffff10"/>
-      <rect x="98" y="72" width="60" height="5" rx="2.5" fill="#ffffff10"/>
-      <rect x="14" y="86" width="50" height="5" rx="2.5" fill="#ffffff10"/>
-      <rect x="14" y="96" width="152" height="0.5" fill="#ffffff10"/>
-      <rect x="14" y="106" width="152" height="8" rx="4" fill="#ffffff08"/>
-      <rect x="140" y="106" width="26" height="8" rx="4" fill="#ffffff15"/>
+
+  <!-- Backdrop -->
+  <rect width="1200" height="430" rx="18" fill="#07070b"/>
+  <g filter="url(#blur-xl)">
+    <circle class="blob" cx="250" cy="110" r="170" fill="#b3182a" opacity=".26"/>
+    <circle class="blob b2" cx="960" cy="320" r="190" fill="#4b2fa0" opacity=".32"/>
+    <circle class="blob b3" cx="620" cy="440" r="160" fill="#1f5fd0" opacity=".2"/>
+  </g>
+  <rect width="1200" height="430" fill="url(#dots)" opacity=".07" mask="url(#dot-mask)"/>
+  <rect x=".5" y=".5" width="1199" height="429" rx="18" fill="none" stroke="#ffffff12"/>
+
+  <!-- Title -->
+  <text x="600" y="84" text-anchor="middle" font-size="46" font-weight="700" letter-spacing="-.5" fill="url(#title)">Nilesoft Shell GUI</text>
+  <rect class="underline" x="550" y="104" width="100" height="3" rx="1.5" fill="url(#accent)"/>
+
+  <!-- Flow from the editor to the menu -->
+  <use xlink:href="#flow" class="flow-track" fill="none" stroke="#ffffff26" stroke-width="1.5" stroke-dasharray="4 6" stroke-linecap="round"/>
+  <g class="pill">
+    <animateMotion dur="16s" repeatCount="indefinite" calcMode="linear"
+      keyPoints="0;0;1;1;0;1;1;0;1;1" keyTimes="0;.25;.3;.5;.5;.55;.75;.75;.8;1">
+      <mpath xlink:href="#flow"/>
+    </animateMotion>
+    <rect x="-40" y="-12" width="80" height="24" rx="12" fill="#14141f" stroke="#ffffff40"/>
+    <text class="mono" x="0" y="4" text-anchor="middle" font-size="11" fill="#e6e6f0">theme.nss</text>
+  </g>
+
+  <!-- Editor window -->
+  <g transform="translate(110 130)">
+    <rect width="400" height="250" rx="14" fill="#0e0e16" fill-opacity=".92" stroke="#ffffff17" filter="url(#shadow)"/>
+    <path d="M0 14a14 14 0 0 1 14-14h372a14 14 0 0 1 14 14v20H0z" fill="#ffffff08"/>
+    <circle cx="20" cy="17" r="5" fill="#ff5f57"/><circle cx="37" cy="17" r="5" fill="#febc2e"/><circle cx="54" cy="17" r="5" fill="#28c840"/>
+    <text x="200" y="21" text-anchor="middle" font-size="11.5" fill="#ffffff70">theme-tweaker</text>
+
+    <text x="24" y="62" font-size="10.5" font-weight="600" letter-spacing="1.6" fill="#ffffff66">PRESET</text>
+    <g font-size="17" font-weight="600" fill="#f4f4f8">
+      <text class="gA" x="24" y="86">Crimson Navy</text>
+      <text class="gB" x="24" y="86">Light Blue</text>
+      <text class="gC" x="24" y="86">Forest</text>
+      <text class="gD" x="24" y="86">Amber Glow</text>
+    </g>
+    <circle cx="36" cy="118" r="12" fill="url(#mA)" stroke="#ffffff30"/>
+    <circle cx="72" cy="118" r="12" fill="url(#mB)" stroke="#ffffff30"/>
+    <circle cx="108" cy="118" r="12" fill="url(#mC)" stroke="#ffffff30"/>
+    <circle cx="144" cy="118" r="12" fill="url(#mD)" stroke="#ffffff30"/>
+    <circle class="ring" cx="36" cy="118" r="16.5" fill="none" stroke="#fff" stroke-width="1.6"/>
+
+    <text x="24" y="156" font-size="10.5" font-weight="600" letter-spacing="1.6" fill="#ffffff66">OPACITY</text>
+    <rect x="24" y="166" width="226" height="4" rx="2" fill="#ffffff18"/>
+    <rect class="fill" x="24" y="166" width="226" height="4" rx="2" fill="url(#accent)"/>
+    <circle class="knob" cx="24" cy="168" r="7" fill="#fff"/>
+
+    <text class="mono" x="24" y="206" font-size="12.5" fill="#ffffff70">accent =</text>
+    <g class="mono" font-size="12.5">
+      <text class="gA" x="104" y="206" fill="#ff6b7d">#b3182a</text>
+      <text class="gB" x="104" y="206" fill="#7fb8f0">#3a7ab5</text>
+      <text class="gC" x="104" y="206" fill="#5fd38a">#1a6a3a</text>
+      <text class="gD" x="104" y="206" fill="#ffb35c">#a65a0a</text>
+    </g>
+    <text class="saved" x="24" y="232" font-size="11.5" fill="#7ee2a8">&#10003; written to theme.nss</text>
+
+    <!-- Static toggles column -->
+    <g font-size="12" fill="#ffffffb0">
+      <text x="276" y="66">Blur</text>
+      <rect x="336" y="55" width="36" height="20" rx="10" fill="url(#accent)"/><circle cx="362" cy="65" r="7" fill="#fff"/>
+      <text x="276" y="104">Shadow</text>
+      <rect x="336" y="93" width="36" height="20" rx="10" fill="url(#accent)"/><circle cx="362" cy="103" r="7" fill="#fff"/>
+      <text x="276" y="142">Border</text>
+      <rect x="336" y="131" width="36" height="20" rx="10" fill="#ffffff1c"/><circle cx="346" cy="141" r="7" fill="#ffffffa0"/>
     </g>
   </g>
-  <text x="275" y="105" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#f0f0f0">Nilesoft Shell GUI</text>
+
+  <!-- Context menu -->
+  <g transform="translate(742 150)">
+    <g class="menu">
+      <g filter="url(#blur-lg)" opacity=".6">
+        <ellipse cx="140" cy="119" rx="150" ry="110" fill="#b3182a"/>
+        <ellipse class="tB" cx="140" cy="119" rx="150" ry="110" fill="#3a7ab5"/>
+        <ellipse class="tC" cx="140" cy="119" rx="150" ry="110" fill="#1f8a4a"/>
+        <ellipse class="tD" cx="140" cy="119" rx="150" ry="110" fill="#c66a10"/>
+      </g>
+      <g filter="url(#shadow)">
+        <rect width="280" height="238" rx="10" fill="url(#mA)"/>
+      </g>
+      <rect class="tB" width="280" height="238" rx="10" fill="url(#mB)"/>
+      <rect class="tC" width="280" height="238" rx="10" fill="url(#mC)"/>
+      <rect class="tD" width="280" height="238" rx="10" fill="url(#mD)"/>
+      <g clip-path="url(#menuClip)">
+        <rect class="sweep" x="0" y="-20" width="110" height="280" fill="url(#sweepGrad)"/>
+      </g>
+      <rect x=".5" y=".5" width="279" height="237" rx="9.5" fill="none" stroke="#ffffff2e"/>
+      <rect class="hover" x="6" y="0" width="268" height="28" rx="6" fill="#ffffff1f"/>
+
+      <g font-size="13" fill="#f3f3f7" stroke-linecap="round" stroke-linejoin="round">
+        <g class="row" style="animation-delay:0s">
+          <path d="M16 16.5v6.5a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5v-6a1.5 1.5 0 0 0-1.5-1.5h-5l-1.6-1.8h-4.4A1.5 1.5 0 0 0 16 15z" fill="none" stroke="#ffd36b" stroke-width="1.4"/>
+          <text x="42" y="28">Open</text><text x="264" y="28" text-anchor="end" font-size="11.5" fill="#ffffff70">Enter</text>
+        </g>
+        <g class="row" style="animation-delay:.06s">
+          <rect x="16" y="44" width="14" height="12" rx="2" fill="none" stroke="#7fd4ff" stroke-width="1.4"/>
+          <path d="M19 48l2.5 2-2.5 2M23.5 53h3" fill="none" stroke="#7fd4ff" stroke-width="1.4"/>
+          <text x="42" y="58">Open in Terminal</text>
+        </g>
+        <g class="row" style="animation-delay:.12s">
+          <rect x="19" y="73" width="10" height="12" rx="2" fill="none" stroke="#c7b8ff" stroke-width="1.4"/>
+          <path d="M16.5 82.5V77a2 2 0 0 1 2-2" fill="none" stroke="#c7b8ff" stroke-width="1.4"/>
+          <text x="42" y="88">Copy as path</text><text x="264" y="88" text-anchor="end" font-size="11.5" fill="#ffffff70">Ctrl+Shift+C</text>
+        </g>
+        <g class="row" style="animation-delay:.18s">
+          <path d="M20 107l-3.5 4 3.5 4M26 107l3.5 4-3.5 4M24.5 105.5l-3 11" fill="none" stroke="#7ee2a8" stroke-width="1.4"/>
+          <text x="42" y="118">Develop</text><path d="M260 109l4 4-4 4" fill="none" stroke="#ffffff90" stroke-width="1.4"/>
+        </g>
+        <g class="row" style="animation-delay:.24s">
+          <path d="M16.5 143h12M24 138.5l4.5 4.5-4.5 4.5" fill="none" stroke="#ff9d7a" stroke-width="1.4"/>
+          <text x="42" y="148">Go to</text><path d="M260 139l4 4-4 4" fill="none" stroke="#ffffff90" stroke-width="1.4"/>
+        </g>
+        <rect class="row" style="animation-delay:.3s" x="14" y="162.5" width="252" height="1" fill="#ffffff26"/>
+        <g class="row" style="animation-delay:.36s">
+          <circle cx="18" cy="185" r="1.6" fill="#ffffffc0"/><circle cx="23" cy="185" r="1.6" fill="#ffffffc0"/><circle cx="28" cy="185" r="1.6" fill="#ffffffc0"/>
+          <text x="42" y="190">More options</text><path d="M260 181l4 4-4 4" fill="none" stroke="#ffffff90" stroke-width="1.4"/>
+        </g>
+        <g class="row" style="animation-delay:.42s">
+          <circle cx="23" cy="215" r="7" fill="none" stroke="#9fb4ff" stroke-width="1.4"/>
+          <path d="M23 214v4.5" fill="none" stroke="#9fb4ff" stroke-width="1.6"/><circle cx="23" cy="211.3" r=".9" fill="#9fb4ff"/>
+          <text x="42" y="220">Properties</text><text x="264" y="220" text-anchor="end" font-size="11.5" fill="#ffffff70">Alt+Enter</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- Click ripples -->
+  <circle class="ripple r0" cx="742" cy="150" r="16" fill="none" stroke="#fff" stroke-width="2"/>
+  <circle class="ripple r1" cx="182" cy="248" r="16" fill="none" stroke="#fff" stroke-width="2"/>
+  <circle class="ripple r2" cx="218" cy="248" r="16" fill="none" stroke="#fff" stroke-width="2"/>
+  <circle class="ripple r3" cx="254" cy="248" r="16" fill="none" stroke="#fff" stroke-width="2"/>
+
+  <!-- Cursor -->
+  <g class="cursor">
+    <g class="press">
+      <path d="M0 0v21.5l5.4-5 3.7 8.1 3.4-1.5-3.6-7.9h7.2z" fill="#fff" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/>
+    </g>
+  </g>
 </svg>

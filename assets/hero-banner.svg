@@ -5,15 +5,8 @@
     .mono { font-family: "Cascadia Code", Consolas, ui-monospace, Menlo, monospace; }
     .ease { animation-timing-function: cubic-bezier(.65, 0, .35, 1); }
 
-    /* Ambient background */
-    .blob { animation: drift 18s ease-in-out infinite alternate; }
-    .blob.b2 { animation-duration: 23s; animation-direction: alternate-reverse; }
-    .blob.b3 { animation-duration: 27s; }
-    @keyframes drift { from { transform: translate(-40px, -10px); } to { transform: translate(60px, 25px); } }
     .flow-track { animation: dash 1.6s linear infinite; }
     @keyframes dash { to { stroke-dashoffset: -20; } }
-    .underline { transform-box: fill-box; transform-origin: center; animation: pulse 4s ease-in-out infinite; }
-    @keyframes pulse { 0%, 100% { transform: scaleX(.55); opacity: .7; } 50% { transform: scaleX(1); opacity: 1; } }
 
     /* 16s story: right-click opens the menu, then three preset clicks restyle it */
     .cursor { opacity: 0; animation: cursor 16s cubic-bezier(.65, 0, .35, 1) infinite both; }
@@ -124,20 +117,10 @@
   </style>
 
   <defs>
-    <filter id="blur-xl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="70"/></filter>
     <filter id="blur-lg" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="38"/></filter>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
       <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity=".55"/>
     </filter>
-
-    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
-      <circle cx="12" cy="12" r="1" fill="#fff"/>
-    </pattern>
-    <radialGradient id="fade" cx="50%" cy="45%" r="60%">
-      <stop offset="0" stop-color="#fff" stop-opacity=".9"/>
-      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
-    </radialGradient>
-    <mask id="dot-mask"><rect width="1200" height="430" fill="url(#fade)"/></mask>
 
     <linearGradient id="title" x1="300" y1="0" x2="900" y2="0" gradientUnits="userSpaceOnUse" spreadMethod="reflect">
       <stop offset="0" stop-color="#d9d9e6"/>
@@ -177,18 +160,11 @@
   </defs>
 
   <!-- Backdrop -->
-  <rect width="1200" height="430" rx="18" fill="#07070b"/>
-  <g filter="url(#blur-xl)">
-    <circle class="blob" cx="250" cy="110" r="170" fill="#b3182a" opacity=".26"/>
-    <circle class="blob b2" cx="960" cy="320" r="190" fill="#4b2fa0" opacity=".32"/>
-    <circle class="blob b3" cx="620" cy="440" r="160" fill="#1f5fd0" opacity=".2"/>
-  </g>
-  <rect width="1200" height="430" fill="url(#dots)" opacity=".07" mask="url(#dot-mask)"/>
+  <rect width="1200" height="430" rx="18" fill="#000"/>
   <rect x=".5" y=".5" width="1199" height="429" rx="18" fill="none" stroke="#ffffff12"/>
 
   <!-- Title -->
   <text x="600" y="84" text-anchor="middle" font-size="46" font-weight="700" letter-spacing="-.5" fill="url(#title)">Nilesoft Shell GUI</text>
-  <rect class="underline" x="550" y="104" width="100" height="3" rx="1.5" fill="url(#accent)"/>
 
   <!-- Flow from the editor to the menu -->
   <use xlink:href="#flow" class="flow-track" fill="none" stroke="#ffffff26" stroke-width="1.5" stroke-dasharray="4 6" stroke-linecap="round"/>
@@ -208,7 +184,7 @@
     <circle cx="20" cy="17" r="5" fill="#ff5f57"/><circle cx="37" cy="17" r="5" fill="#febc2e"/><circle cx="54" cy="17" r="5" fill="#28c840"/>
     <text x="200" y="21" text-anchor="middle" font-size="11.5" fill="#ffffff70">theme-tweaker</text>
 
-    <text x="24" y="62" font-size="10.5" font-weight="600" letter-spacing="1.6" fill="#ffffff66">PRESET</text>
+    <text x="24" y="62" font-size="12" font-weight="600" fill="#ffffff80">Preset</text>
     <g font-size="17" font-weight="600" fill="#f4f4f8">
       <text class="gA" x="24" y="86">Crimson Navy</text>
       <text class="gB" x="24" y="86">Light Blue</text>
@@ -221,7 +197,7 @@
     <circle cx="144" cy="118" r="12" fill="url(#mD)" stroke="#ffffff30"/>
     <circle class="ring" cx="36" cy="118" r="16.5" fill="none" stroke="#fff" stroke-width="1.6"/>
 
-    <text x="24" y="156" font-size="10.5" font-weight="600" letter-spacing="1.6" fill="#ffffff66">OPACITY</text>
+    <text x="24" y="156" font-size="12" font-weight="600" fill="#ffffff80">Opacity</text>
     <rect x="24" y="166" width="226" height="4" rx="2" fill="#ffffff18"/>
     <rect class="fill" x="24" y="166" width="226" height="4" rx="2" fill="url(#accent)"/>
     <circle class="knob" cx="24" cy="168" r="7" fill="#fff"/>

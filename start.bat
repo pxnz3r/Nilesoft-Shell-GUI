@@ -1,3 +1,4 @@
 @echo off
-streamlit run theme-tweaker.py
+cd /d "%~dp0"
+python -m streamlit run theme-tweaker.py
 pause

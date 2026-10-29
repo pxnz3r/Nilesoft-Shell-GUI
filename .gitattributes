@@ -1,0 +1,2 @@
+# Batch files must keep CRLF or cmd.exe can misparse them
+*.bat text eol=crlf

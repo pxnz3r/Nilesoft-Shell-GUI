@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Nilesoft Shell bug (not this GUI)
+    url: https://github.com/moudey/shell/issues
+    about: Problems with Shell itself, its menus, or NSS behavior go upstream.
+  - name: Nilesoft Shell docs
+    url: https://nilesoft.org/docs
+    about: Full NSS reference.

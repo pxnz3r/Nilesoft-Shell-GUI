@@ -1,7 +1,7 @@
 theme
 {
     name="modern"
-    dark=auto
+    dark=default
     view=view.medium
     background
     {
